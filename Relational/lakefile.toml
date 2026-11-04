@@ -1,0 +1,16 @@
+name = "Relational"
+version = "0.1.0"
+defaultTargets = ["Relational"]
+
+# Matrices (`Relational.Mat`), the box combinators over them
+# (`Relational.Box`), LTL (`Relational.LTL`) and reactive modules with their
+# proof rules (`Relational.Basic`).
+[[lean_lib]]
+name = "Relational"
+
+# Mathlib comes through cslib, at the revision cslib pins. Reactor's
+# generated projects require the same cslib, so the two resolve as one.
+[[require]]
+name = "cslib"
+scope = "leanprover"
+rev = "v4.28.0"
