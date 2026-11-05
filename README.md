@@ -8,7 +8,7 @@ Each library is a separate Lake package in its own directory:
 | [`Relational`](Relational) | `Relational.Mat`, `Relational.Box`, `Relational.LTL`, `Relational.Basic` | matrices, the box combinators over them, LTL, reactive modules and their proof rules |
 | [`LeanAI`](LeanAI) | `LeanAI`, `LeanAI.*` | the `ai_solve` tactic and its LLM backends |
 
-Both are pinned to `leanprover/lean4:v4.28.0`. `Relational` requires cslib at
+Both are pinned to `leanprover/lean4:v4.34.0`. `Relational` requires cslib at
 the same version, and gets Mathlib through it.
 
 ## Using them

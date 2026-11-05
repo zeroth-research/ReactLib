@@ -1,11 +1,11 @@
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Algebra.BigOperators.Fin
 import Mathlib.Data.Fintype.Basic
-import Mathlib.Data.Real.Basic
+import Mathlib.Basic.Real.Basic
 -- `⌊x⌋` (the `to_int` of a Real-valued ranking) needs both the
 -- notation and the `FloorRing ℝ` instance.
 import Mathlib.Algebra.Order.Floor.Defs
-import Mathlib.Data.Real.Archimedean
+import Mathlib.Algebra.Order.Archimedean.Real.Basic
 import Mathlib.Data.List.OfFn
 import Mathlib.Data.List.Zip
 import Mathlib.Tactic.FinCases
@@ -20,12 +20,18 @@ import Mathlib.Data.BitVec
 
 abbrev Mat (t: Type) (m n: Nat)  := Fin m → Fin n → t
 
-/-  Matrix operations as plain functions -/
+/-  Matrix operations as plain functions.
 
-def MatAdd [HAdd t t t] (a b : Fin m → Fin n → t) : Fin m → Fin n → t :=
+    Reducible, like `Mat` itself: a generated proof that compares matrix
+    entries does so under `decide`, and once `simp` has unfolded `a + b`
+    in the proposition the `Decidable` instance still names `MatAdd`.
+    From Lean v4.34 `simp` will not rewrite a term whose instance agrees
+    with it only through a semireducible unfolding. -/
+
+@[reducible] def MatAdd [HAdd t t t] (a b : Fin m → Fin n → t) : Fin m → Fin n → t :=
   fun i j => a i j + b i j
 
-def MatMul [HMul t t t] [AddCommMonoid t](a : Mat t m k) (b : Mat t k n) : Mat t m n :=
+@[reducible] def MatMul [HMul t t t] [AddCommMonoid t](a : Mat t m k) (b : Mat t k n) : Mat t m n :=
   fun i j => Finset.sum Finset.univ (fun l => a i l * b l j)
 
 instance [HAdd t t t]: HAdd (Mat t m n) (Mat t m n) (Mat t m n) where
@@ -34,9 +40,9 @@ instance [HAdd t t t]: HAdd (Mat t m n) (Mat t m n) (Mat t m n) where
 instance [HMul t t t][AddCommMonoid t]: HMul (Mat t m k) (Mat t k n) (Mat t m n) where
   hMul := MatMul
 
-def MatZero [OfNat t 0]: Mat t m n := fun _ _ => (0 : t)
+@[reducible] def MatZero [OfNat t 0]: Mat t m n := fun _ _ => (0 : t)
 
-def MatTranspose (A : Mat t m n) : Mat t n m := fun i j => A j i
+@[reducible] def MatTranspose (A : Mat t m n) : Mat t n m := fun i j => A j i
 
 
 /-- Affine map (math convention): `affineLinear A x b = A * x + b`, i.e. the

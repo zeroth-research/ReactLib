@@ -13,4 +13,4 @@ name = "Relational"
 [[require]]
 name = "cslib"
 scope = "leanprover"
-rev = "v4.28.0"
+rev = "v4.34.0"

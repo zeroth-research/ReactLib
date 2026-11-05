@@ -1,4 +1,5 @@
 import Cslib.Foundations.Semantics.LTS.Basic
+import Cslib.Foundations.Data.OmegaSequence.Init
 
 /-  ----------------------------------------------------------------
  LTL formulas

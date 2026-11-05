@@ -44,7 +44,7 @@ structure Trace (ts: TS State Label) where
   states: Cslib.ωSequence State
   labels: Cslib.ωSequence Label
 
-  is_ts_trace: ts.ωTr states labels
+  is_ts_trace: ts.OmegaExecution states labels
 -/
 
 namespace TS
@@ -58,7 +58,7 @@ abbrev init (ts: TS State Label) := ts.start
 /- initial infinite trace of an TS -/
 def ωTrace (ts : TS State Label)
     (ss : Cslib.ωSequence State) (μs : Cslib.ωSequence Label) : Prop :=
-  ts.start (ss.get 0) ∧ ts.ωTr ss μs
+  ts.start (ss.get 0) ∧ ts.OmegaExecution ss μs
 
 /- is state reachable? -/
 def reachable (lts : TS State Label) (s : State) : Prop :=
@@ -401,7 +401,7 @@ theorem TS_traces (M: ReactiveModule Extl State):
   ∀ ss μs, M.toTS.ωTrace ss μs → M.traces ss := by
   intro ss μs h
   unfold traces
-  simp_all [toTS, TS.ωTrace, Cslib.LTS.ωTr]
+  simp_all [toTS, TS.ωTrace, Cslib.LTS.OmegaExecution]
   constructor
   case left =>
     have hi := h.left
@@ -422,7 +422,7 @@ theorem traces_to_TS (M: ReactiveModule Extl State):
   intro ss
   simp [traces]
   have : ss 0 = ss.get 0 := rfl
-  simp_all [toTS, Cslib.LTS.ωTr, TS_init, TS_update, TS.ωTrace]
+  simp_all [toTS, Cslib.LTS.OmegaExecution, TS_init, TS_update, TS.ωTrace]
   intro x hx hs hi
   constructor
   . refine ⟨ x, ?_⟩
