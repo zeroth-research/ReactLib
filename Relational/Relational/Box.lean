@@ -136,6 +136,22 @@ infixr:75 " ⊗ " => par
 @[simp] def neg {t: Type} [Neg t]: Box [t] [t] :=
   ⟨fun val!(a) => val!(-a)⟩
 
+-- Elementwise on matrices. `*` on two `Mat`s is their matrix product, which
+-- is what `mul` computes on them, so the elementwise product is `hadamard`;
+-- `/` and `%` have no matrix form, and are taken element by element.
+
+@[simp] def hadamard {t : Type} [Mul t] {m n : Nat} :
+    Box [Mat t m n, Mat t m n] [Mat t m n] :=
+  ⟨fun val!(a, b) => val!(fun i j => a i j * b i j)⟩
+
+@[simp] def div {t : Type} [Div t] {m n : Nat} :
+    Box [Mat t m n, Mat t m n] [Mat t m n] :=
+  ⟨fun val!(a, b) => val!(fun i j => a i j / b i j)⟩
+
+@[simp] def mod {t : Type} [Mod t] {m n : Nat} :
+    Box [Mat t m n, Mat t m n] [Mat t m n] :=
+  ⟨fun val!(a, b) => val!(fun i j => a i j % b i j)⟩
+
 @[simp] def eq {t : Type} [DecidableEq t] : Box [t, t] [Mat Bool 1 1] :=
   ⟨fun val!(a, b) => val!(fun _ _ => decide (a == b))⟩
 
