@@ -166,6 +166,9 @@ infixr:75 " ⊗ " => par
 @[simp] def or: Box [Mat Bool 1 1, Mat Bool 1 1] [Mat Bool 1 1] :=
   ⟨fun val!(a, b) => val!(fun _ _ => (a 0 0 || b 0 0))⟩
 
+@[simp] def implies: Box [Mat Bool 1 1, Mat Bool 1 1] [Mat Bool 1 1] :=
+  ⟨fun val!(a, b) => val!(fun _ _ => (!(a 0 0) || b 0 0))⟩
+
 -- Unary reductions, matching the theory: one operand in, a single element out.
 @[simp] def min {t : Type} [Min t] [Inhabited t] {m n : Nat} :
     Box [Mat t m n] [Mat t 1 1] :=
