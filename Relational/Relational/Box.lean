@@ -231,6 +231,25 @@ infixr:75 " ⊗ " => par
     Box [Mat t m n] [Mat t 1 1] :=
   ⟨fun val!(x) => val!(fun _ _ => x i j)⟩
 
+-- Casts between the theories' sorts, element by element. A bit-vector is
+-- read as the natural number it holds, a Real is taken to the integer below
+-- it, and a 1-bit vector is a Bool by being 1.
+
+@[simp] def intToReal {m n : Nat} : Box [Mat Int m n] [Mat ℝ m n] :=
+  ⟨fun val!(x) => val!(fun i j => ((x i j : Int) : ℝ))⟩
+
+@[simp] noncomputable def realToInt {m n : Nat} : Box [Mat ℝ m n] [Mat Int m n] :=
+  ⟨fun val!(x) => val!(fun i j => ⌊x i j⌋)⟩
+
+@[simp] def bvToInt {w m n : Nat} : Box [Mat (BitVec w) m n] [Mat Int m n] :=
+  ⟨fun val!(x) => val!(fun i j => ((BitVec.toNat (x i j) : Nat) : Int))⟩
+
+@[simp] def bitToBool {m n : Nat} : Box [Mat (BitVec 1) m n] [Mat Bool m n] :=
+  ⟨fun val!(x) => val!(fun i j => decide (x i j = 1))⟩
+
+@[simp] def boolToBit {m n : Nat} : Box [Mat Bool m n] [Mat (BitVec 1) m n] :=
+  ⟨fun val!(x) => val!(fun i j => if x i j then 1 else 0)⟩
+
 @[simp] def argmax_1d {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
     {n : Nat} : Box [Mat t 1 n] [Mat Int 1 1] :=
   ⟨fun val!(x) => val!(fun i j => ((_root_.argmax_1d x) i j : Int))⟩
