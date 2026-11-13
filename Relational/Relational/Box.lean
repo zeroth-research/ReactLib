@@ -226,6 +226,11 @@ infixr:75 " ⊗ " => par
 @[simp] def transpose {m n : Nat} : Box [Mat t m n] [Mat t n m] :=
   ⟨fun val!(x) => val!(MatTranspose x)⟩
 
+/-- Element `(i, j)` of a matrix, as a 1×1 one. -/
+@[simp] def get {t : Type} {m n : Nat} (i : Fin m) (j : Fin n) :
+    Box [Mat t m n] [Mat t 1 1] :=
+  ⟨fun val!(x) => val!(fun _ _ => x i j)⟩
+
 @[simp] def argmax_1d {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
     {n : Nat} : Box [Mat t 1 n] [Mat Int 1 1] :=
   ⟨fun val!(x) => val!(fun i j => ((_root_.argmax_1d x) i j : Int))⟩
