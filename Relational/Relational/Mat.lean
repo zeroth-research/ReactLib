@@ -54,7 +54,7 @@ abbrev Mat (t: Type) (m n: Nat)  := Matrix (Fin m) (Fin n) t
     under its binders at every entry it reads, which for a 32-element
     `match` takes more than a proof's heartbeat budget. -/
 @[simp↓] theorem Mat.mk_apply {t : Type} {m n : Nat} (f : Fin m → Fin n → t)
-    (i : Fin m) (j : Fin n) : Mat.mk f i j = f i j := rfl
+    (i : Fin m) (j : Fin n) : Mat.mk f i j = f i j := id rfl
 
 /-  The matrix operations under the names generated code uses, each
     Mathlib's.
@@ -140,27 +140,43 @@ def argmax {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
         (fun (best : Nat × t) p => if best.2 < p.2 then p else best) p0).1
 
 
-/-! Helper lemmas for simp -/
-@[simp] theorem affineLinear_apply [Mul t] [AddCommMonoid t]
+/-! Reading an entry of a matrix operation.
+
+    A `decide` inside an `if`'s condition is where these go wrong: if its
+    proposition is rewritten and its `Decidable` instance is not, the
+    instance states the old terms, Lean no longer takes the `if` to be
+    well-typed under the transparency `simp` checks at, and `Mat_ite_apply`
+    does not match it. Two things keep the instance in step:
+
+    - They are pre-lemmas (`↓`): `simp` moves `i j` inward, through every
+      operation down to the entries, and splits each `if` between matrices
+      before it simplifies anything inside it.
+    - They are proved by `id rfl`, not `rfl`. A lemma proved by `rfl` is one
+      `dsimp` uses, and `dsimp`, and `simp` rewriting by one, change a
+      term in place, instances untouched. Proved otherwise, `simp` rewrites
+      through congruence, which builds the instance anew. Mathlib's own
+      `Matrix.add_apply` and the like are `rfl` lemmas; a `dsimp` over
+      generated matrices has to leave them out. -/
+@[simp↓] theorem affineLinear_apply [Mul t] [AddCommMonoid t]
     (A : Mat t m k) (x : Mat t k n) (b : Mat t m n) (i : Fin m) (j : Fin n) :
     affineLinear A x b i j = Finset.sum Finset.univ (fun l => A i l * x l j) + b i j := by
   simp [affineLinear, Matrix.mul_apply]
 
 
-@[simp] theorem relu_apply [Max t] [OfNat t 0]
+@[simp↓] theorem relu_apply [Max t] [OfNat t 0]
     (x : Mat t m n) (i : Fin m) (j : Fin n) :
-    ReLu x i j = Max.max 0 (x i j) := rfl
+    ReLu x i j = Max.max 0 (x i j) := id rfl
 
 
 
 @[simp] theorem MatAdd_apply {m n : Nat} (a b : Mat Int m n) (i : Fin m) (j : Fin n) :
-    MatAdd a b i j = a i j + b i j := rfl
+    MatAdd a b i j = a i j + b i j := id rfl
 
 @[simp] theorem MatMul_apply {m k n : Nat} (a : Mat Int m k) (b : Mat Int k n) (i : Fin m) (j : Fin n) :
-    MatMul a b i j = Finset.sum Finset.univ (fun l => a i l * b l j) := rfl
+    MatMul a b i j = Finset.sum Finset.univ (fun l => a i l * b l j) := id rfl
 
-@[simp] theorem MatZero_apply {t : Type} [Zero t] {m n : Nat} (i : Fin m) (j : Fin n) :
-    (MatZero : Mat t m n) i j = 0 := rfl
+@[simp↓] theorem MatZero_apply {t : Type} [Zero t] {m n : Nat} (i : Fin m) (j : Fin n) :
+    (MatZero : Mat t m n) i j = 0 := id rfl
 
 @[simp] theorem MatAdd_eq_add {m n : Nat} (a b : Mat Int m n) :
     MatAdd a b = a + b := rfl
@@ -171,13 +187,25 @@ def argmax {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
 
 /-- Reduce `(a * b) i j` directly (needed because `MatMul_eq_mul` rewrites
     `MatMul` away before `MatMul_apply` can fire). -/
-@[simp] theorem mul_Mat_apply [Mul t] [AddCommMonoid t]
+@[simp↓] theorem mul_Mat_apply [Mul t] [AddCommMonoid t]
     (a : Mat t m k) (b : Mat t k n) (i : Fin m) (j : Fin n) :
-    (a * b) i j = Finset.sum Finset.univ (fun l => a i l * b l j) := rfl
+    (a * b) i j = Finset.sum Finset.univ (fun l => a i l * b l j) := id rfl
 
-@[simp] theorem add_Mat_apply [Add t]
+@[simp↓] theorem add_Mat_apply [Add t]
     (a b : Mat t m n) (i : Fin m) (j : Fin n) :
-    (a + b) i j = a i j + b i j := rfl
+    (a + b) i j = a i j + b i j := id rfl
+
+@[simp↓] theorem sub_Mat_apply [Sub t]
+    (a b : Mat t m n) (i : Fin m) (j : Fin n) :
+    (a - b) i j = a i j - b i j := id rfl
+
+@[simp↓] theorem neg_Mat_apply [Neg t]
+    (a : Mat t m n) (i : Fin m) (j : Fin n) :
+    (-a) i j = -(a i j) := id rfl
+
+@[simp↓] theorem MatTranspose_apply
+    (a : Mat t m n) (i : Fin n) (j : Fin m) :
+    MatTranspose a i j = a j i := id rfl
 
 -- This complicates the proofs..
 /- coercion between single-element matrix and the element -/
