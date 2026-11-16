@@ -142,48 +142,48 @@ infixr:75 " ⊗ " => par
 
 @[simp] def hadamard {t : Type} [Mul t] {m n : Nat} :
     Box [Mat t m n, Mat t m n] [Mat t m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => a i j * b i j)⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => a i j * b i j)⟩
 
 @[simp] def div {t : Type} [Div t] {m n : Nat} :
     Box [Mat t m n, Mat t m n] [Mat t m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => a i j / b i j)⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => a i j / b i j)⟩
 
 @[simp] def mod {t : Type} [Mod t] {m n : Nat} :
     Box [Mat t m n, Mat t m n] [Mat t m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => a i j % b i j)⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => a i j % b i j)⟩
 
 @[simp] def eq {t : Type} [DecidableEq t] : Box [t, t] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => decide (a == b))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => decide (a == b))⟩
 
 @[simp] def neq {t : Type} [DecidableEq t] : Box [t, t] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => decide (a != b))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => decide (a != b))⟩
 
 @[simp] def le {t: Type} [LE t] [DecidableRel (· ≤ ·: t → t → Prop)]: Box [t, t] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => decide (a ≤ b))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => decide (a ≤ b))⟩
 
 @[simp] def gt {t: Type} [LT t] [DecidableRel (· < · : t → t → Prop)]: Box [t, t] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => decide (b < a))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => decide (b < a))⟩
 
 @[simp] def ge {t: Type} [LE t] [DecidableRel (· ≤ · : t → t → Prop)] : Box [t, t] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => decide (b ≤ a))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => decide (b ≤ a))⟩
 
 @[simp] def lt {t: Type} [LT t] [DecidableRel (· < · : t → t → Prop)] : Box [t, t] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => decide (a < b))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => decide (a < b))⟩
 
 -- @[simp] def and {t: Type} [Coe t Bool] [Coe Prop t]: Box [t, t] [Bool] :=
 --   ⟨fun val!(a, b) => val!(a ∧ b)⟩
 
 @[simp] def and: Box [Mat Bool 1 1, Mat Bool 1 1] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => (a 0 0 && b 0 0))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => (a 0 0 && b 0 0))⟩
 
 @[simp] def not: Box [Mat Bool 1 1] [Mat Bool 1 1] :=
-  ⟨fun val!(a) => val!(fun _ _ => ¬(a 0 0))⟩
+  ⟨fun val!(a) => val!(Mat.mk fun _ _ => ¬(a 0 0))⟩
 
 @[simp] def or: Box [Mat Bool 1 1, Mat Bool 1 1] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => (a 0 0 || b 0 0))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => (a 0 0 || b 0 0))⟩
 
 @[simp] def implies: Box [Mat Bool 1 1, Mat Bool 1 1] [Mat Bool 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => (!(a 0 0) || b 0 0))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => (!(a 0 0) || b 0 0))⟩
 
 -- Unary reductions, matching the theory: one operand in, a single element out.
 @[simp] def min {t : Type} [Min t] [Inhabited t] {m n : Nat} :
@@ -229,34 +229,34 @@ infixr:75 " ⊗ " => par
 /-- Element `(i, j)` of a matrix, as a 1×1 one. -/
 @[simp] def get {t : Type} {m n : Nat} (i : Fin m) (j : Fin n) :
     Box [Mat t m n] [Mat t 1 1] :=
-  ⟨fun val!(x) => val!(fun _ _ => x i j)⟩
+  ⟨fun val!(x) => val!(Mat.mk fun _ _ => x i j)⟩
 
 -- Casts between the theories' sorts, element by element. A bit-vector is
 -- read as the natural number it holds, a Real is taken to the integer below
 -- it, and a 1-bit vector is a Bool by being 1.
 
 @[simp] def intToReal {m n : Nat} : Box [Mat Int m n] [Mat ℝ m n] :=
-  ⟨fun val!(x) => val!(fun i j => ((x i j : Int) : ℝ))⟩
+  ⟨fun val!(x) => val!(Mat.mk fun i j => ((x i j : Int) : ℝ))⟩
 
 @[simp] noncomputable def realToInt {m n : Nat} : Box [Mat ℝ m n] [Mat Int m n] :=
-  ⟨fun val!(x) => val!(fun i j => ⌊x i j⌋)⟩
+  ⟨fun val!(x) => val!(Mat.mk fun i j => ⌊x i j⌋)⟩
 
 @[simp] def bvToInt {w m n : Nat} : Box [Mat (BitVec w) m n] [Mat Int m n] :=
-  ⟨fun val!(x) => val!(fun i j => ((BitVec.toNat (x i j) : Nat) : Int))⟩
+  ⟨fun val!(x) => val!(Mat.mk fun i j => ((BitVec.toNat (x i j) : Nat) : Int))⟩
 
 @[simp] def bitToBool {m n : Nat} : Box [Mat (BitVec 1) m n] [Mat Bool m n] :=
-  ⟨fun val!(x) => val!(fun i j => decide (x i j = 1))⟩
+  ⟨fun val!(x) => val!(Mat.mk fun i j => decide (x i j = 1))⟩
 
 @[simp] def boolToBit {m n : Nat} : Box [Mat Bool m n] [Mat (BitVec 1) m n] :=
-  ⟨fun val!(x) => val!(fun i j => if x i j then 1 else 0)⟩
+  ⟨fun val!(x) => val!(Mat.mk fun i j => if x i j then 1 else 0)⟩
 
 @[simp] def argmax_1d {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
     {n : Nat} : Box [Mat t 1 n] [Mat Int 1 1] :=
-  ⟨fun val!(x) => val!(fun i j => ((_root_.argmax_1d x) i j : Int))⟩
+  ⟨fun val!(x) => val!(Mat.mk fun i j => ((_root_.argmax_1d x) i j : Int))⟩
 
 @[simp] def argmax {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
     {m n : Nat} : Box [Mat t m n] [Mat Int 1 1] :=
-  ⟨fun val!(x) => val!(fun i j => ((_root_.argmax x) i j : Int))⟩
+  ⟨fun val!(x) => val!(Mat.mk fun i j => ((_root_.argmax x) i j : Int))⟩
 
 -- BV works entirely in BitVec: that theory has no Bool wires, so an `ite`
 -- condition and an `eq` result are both `Mat (BitVec 1) 1 1`. The Boolean
@@ -264,38 +264,38 @@ infixr:75 " ⊗ " => par
 -- directly rather than converting through a BVToBool box.
 
 @[simp] def bvNot {w m n : Nat} : Box [Mat (BitVec w) m n] [Mat (BitVec w) m n] :=
-  ⟨fun val!(a) => val!(fun i j => ~~~(a i j))⟩
+  ⟨fun val!(a) => val!(Mat.mk fun i j => ~~~(a i j))⟩
 
 @[simp] def bvAnd {w m n : Nat} :
     Box [Mat (BitVec w) m n, Mat (BitVec w) m n] [Mat (BitVec w) m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => (a i j) &&& (b i j))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => (a i j) &&& (b i j))⟩
 
 @[simp] def bvOr {w m n : Nat} :
     Box [Mat (BitVec w) m n, Mat (BitVec w) m n] [Mat (BitVec w) m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => (a i j) ||| (b i j))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => (a i j) ||| (b i j))⟩
 
 @[simp] def bvXor {w m n : Nat} :
     Box [Mat (BitVec w) m n, Mat (BitVec w) m n] [Mat (BitVec w) m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => (a i j) ^^^ (b i j))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => (a i j) ^^^ (b i j))⟩
 
 @[simp] def bvUMod {w m n : Nat} :
     Box [Mat (BitVec w) m n, Mat (BitVec w) m n] [Mat (BitVec w) m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => BitVec.umod (a i j) (b i j))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => BitVec.umod (a i j) (b i j))⟩
 
 @[simp] def bvSMod {w m n : Nat} :
     Box [Mat (BitVec w) m n, Mat (BitVec w) m n] [Mat (BitVec w) m n] :=
-  ⟨fun val!(a, b) => val!(fun i j => BitVec.smod (a i j) (b i j))⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun i j => BitVec.smod (a i j) (b i j))⟩
 
 @[simp] def bvIte {t : Type} : Box [Mat (BitVec 1) 1 1, t, t] [t] :=
   ⟨fun val!(c, a, b) => if c 0 0 = 1 then val!(a) else val!(b)⟩
 
 @[simp] def bvEq {w : Nat} :
     Box [Mat (BitVec w) 1 1, Mat (BitVec w) 1 1] [Mat (BitVec 1) 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => if a 0 0 = b 0 0 then 1 else 0)⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => if a 0 0 = b 0 0 then 1 else 0)⟩
 
 @[simp] def bvNe {w : Nat} :
     Box [Mat (BitVec w) 1 1, Mat (BitVec w) 1 1] [Mat (BitVec 1) 1 1] :=
-  ⟨fun val!(a, b) => val!(fun _ _ => if a 0 0 = b 0 0 then 0 else 1)⟩
+  ⟨fun val!(a, b) => val!(Mat.mk fun _ _ => if a 0 0 = b 0 0 then 0 else 1)⟩
 
 end Box
 

@@ -203,7 +203,7 @@ instance {t: Type} : Coe (Mat t 1 1) t where
 -/
 
 instance : Coe Bool (Mat Bool 1 1) where
-  coe x := fun _  _ => x
+  coe x := Mat.mk fun _ _ => x
 
 instance : Coe (Mat Bool 1 1) Bool where
   coe m := m 0 0
@@ -212,12 +212,12 @@ instance : Coe (Mat Bool 1 1) Bool where
 
 /- this might be necessary to automate the proofs -/
 @[simp] theorem coe_bool_mat (b : Bool) :
-  Coe.coe b = ((fun _ _ => b): Mat Bool 1 1) := by rfl
+  Coe.coe b = (Mat.mk fun _ _ => b : Mat Bool 1 1) := by rfl
 
 @[simp] theorem coe_mat_bool (m : Mat Bool 1 1) :
   Coe.coe m = m 0 0 := by rfl
 
-theorem Mat_1_1_eq (f : Mat t 1 1) : f = fun _ _ => f 0 0 := by
+theorem Mat_1_1_eq (f : Mat t 1 1) : f = Mat.mk fun _ _ => f 0 0 := by
   ext i j;
   have hi: i = ⟨ 0, by simp ⟩ := by exact Fin.fin_one_eq_zero i
   have hj: j = ⟨ 0, by simp ⟩ := by exact Fin.fin_one_eq_zero j
