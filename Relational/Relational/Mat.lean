@@ -20,6 +20,35 @@ import Mathlib.Data.BitVec
 
 abbrev Mat (t: Type) (m n: Nat)  := Fin m → Fin n → t
 
+/-- The matrix whose entry `(i, j)` is `f i j`: `Mat.mk fun i j => …`.
+
+    The identity, `Mat` being a function type. But a matrix written through
+    it is a `Mat` by its type, where a bare `fun i j => …` is one only
+    because `Mat` unfolds to a function type. So a matrix built from its
+    entries is built with `Mat.mk`, and the lemmas and instances stated for
+    `Mat` meet it without relying on that unfolding.
+
+    `[implicit_reducible]`: unfolded where Lean checks implicit and instance
+    arguments for definitional equality, and by `decide` and `rfl`, but not
+    when `simp` indexes a term or instance search runs, so `simp` meets
+    `Mat.mk` itself and takes it apart with `Mat.mk_apply`. `omega` does not
+    see through it; `simp` first.
+
+    That is for a lambda that is a term. A definition whose body is
+    `fun i j => …`, like `matVecAffine` below, is left as it is: its
+    equation lemma takes `i j` as arguments, so `simp` unfolds it only at an
+    entry and never meets the lambda. Wrapped in `Mat.mk`, the lemma would
+    rewrite the matrix itself wherever it occurs, and the certificates'
+    `simp` then stalls on an `if` between two such matrices. -/
+@[implicit_reducible] def Mat.mk {t : Type} {m n : Nat} (f : Fin m → Fin n → t) : Mat t m n := f
+
+/-- A `Mat.mk` read at an entry is that entry. A pre-lemma (`↓`): `simp`
+    rewrites with it before entering `f`. Entering first, it simplifies `f`
+    under its binders at every entry it reads, which for a 32-element
+    `match` takes more than a proof's heartbeat budget. -/
+@[simp↓] theorem Mat.mk_apply {t : Type} {m n : Nat} (f : Fin m → Fin n → t)
+    (i : Fin m) (j : Fin n) : Mat.mk f i j = f i j := rfl
+
 /-  Matrix operations as plain functions.
 
     Reducible, like `Mat` itself: a generated proof that compares matrix
