@@ -12,21 +12,28 @@ import Mathlib.Tactic.FinCases
 -- `MatMul` sums in an `AddCommMonoid`, and `BitVec n` is one only through
 -- Mathlib's ring instances: without them a `BV.MatMul` does not elaborate.
 import Mathlib.Data.BitVec
+import Mathlib.Data.Matrix.Basic
+import Mathlib.Data.Matrix.Mul
 
 /-!
   Mat — matrix type, operations, and lemmas.
   Core `Box` combinators that consume/produce `Mat` live in `Relational.Box`.
 -/
 
-abbrev Mat (t: Type) (m n: Nat)  := Fin m → Fin n → t
+/-- A matrix of `m` rows and `n` columns: Mathlib's `Matrix`, indexed by
+    `Fin`. Its `+`, `-`, `0` and `*` (the matrix product) are Mathlib's. -/
+abbrev Mat (t: Type) (m n: Nat)  := Matrix (Fin m) (Fin n) t
 
 /-- The matrix whose entry `(i, j)` is `f i j`: `Mat.mk fun i j => …`.
 
-    The identity, `Mat` being a function type. But a matrix written through
-    it is a `Mat` by its type, where a bare `fun i j => …` is one only
-    because `Mat` unfolds to a function type. So a matrix built from its
-    entries is built with `Mat.mk`, and the lemmas and instances stated for
-    `Mat` meet it without relying on that unfolding.
+    `Matrix` is a definition that `simp` and instance search do not see
+    through, so a bare `fun i j => …` is a function to them, not a `Mat`,
+    even where a `Mat` is expected: no `Matrix` lemma matches it, and
+    `s - fun _ _ => 1` does not elaborate. `Mat.mk` gives the same function
+    the type `Mat`, so a matrix built from its entries is built with it.
+    Mathlib's `Matrix.of` does that too, but it is an `Equiv`: once `simp`
+    has rewritten an `if`'s condition, the `Decidable` instance still names
+    `Matrix.of …`, and `simp` stops there.
 
     `[implicit_reducible]`: unfolded where Lean checks implicit and instance
     arguments for definitional equality, and by `decide` and `rfl`, but not
@@ -49,7 +56,8 @@ abbrev Mat (t: Type) (m n: Nat)  := Fin m → Fin n → t
 @[simp↓] theorem Mat.mk_apply {t : Type} {m n : Nat} (f : Fin m → Fin n → t)
     (i : Fin m) (j : Fin n) : Mat.mk f i j = f i j := rfl
 
-/-  Matrix operations as plain functions.
+/-  The matrix operations under the names generated code uses, each
+    Mathlib's.
 
     Reducible, like `Mat` itself: a generated proof that compares matrix
     entries does so under `decide`, and once `simp` has unfolded `a + b`
@@ -57,29 +65,22 @@ abbrev Mat (t: Type) (m n: Nat)  := Fin m → Fin n → t
     From Lean v4.34 `simp` will not rewrite a term whose instance agrees
     with it only through a semireducible unfolding. -/
 
-@[reducible] def MatAdd [HAdd t t t] (a b : Fin m → Fin n → t) : Fin m → Fin n → t :=
-  fun i j => a i j + b i j
+@[reducible] def MatAdd [Add t] (a b : Mat t m n) : Mat t m n := a + b
 
-@[reducible] def MatMul [HMul t t t] [AddCommMonoid t](a : Mat t m k) (b : Mat t k n) : Mat t m n :=
-  fun i j => Finset.sum Finset.univ (fun l => a i l * b l j)
+@[reducible] def MatMul [Mul t] [AddCommMonoid t] (a : Mat t m k) (b : Mat t k n) : Mat t m n :=
+  a * b
 
-instance [HAdd t t t]: HAdd (Mat t m n) (Mat t m n) (Mat t m n) where
-  hAdd := MatAdd
+@[reducible] def MatZero [Zero t]: Mat t m n := 0
 
-instance [HMul t t t][AddCommMonoid t]: HMul (Mat t m k) (Mat t k n) (Mat t m n) where
-  hMul := MatMul
-
-@[reducible] def MatZero [OfNat t 0]: Mat t m n := fun _ _ => (0 : t)
-
-@[reducible] def MatTranspose (A : Mat t m n) : Mat t n m := fun i j => A j i
+@[reducible] def MatTranspose (A : Mat t m n) : Mat t n m := Matrix.transpose A
 
 
 /-- Affine map (math convention): `affineLinear A x b = A * x + b`, i.e. the
     matrix `A` acts on the column vector(s) `x` from the left. This matches the
     theory's `LIA.Linear`/`LRA.Linear` semantics `Y = A·X + B`. -/
-def affineLinear [HMul t t t] [AddCommMonoid t] [HAdd t t t]
+def affineLinear [Mul t] [AddCommMonoid t]
     (A : Mat t m k) (x : Mat t k n) (b : Mat t m n) : Mat t m n :=
-  MatMul A x + b
+  A * x + b
 
 /-- Element-wise ReLU: `relu x i j = max 0 (x i j)` -/
 def ReLu [Max t] [OfNat t 0] (x : Mat t m n) : Mat t m n :=
@@ -140,46 +141,41 @@ def argmax {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
 
 
 /-! Helper lemmas for simp -/
-@[simp] theorem affineLinear_apply [HMul t t t] [AddCommMonoid t] [HAdd t t t]
+@[simp] theorem affineLinear_apply [Mul t] [AddCommMonoid t]
     (A : Mat t m k) (x : Mat t k n) (b : Mat t m n) (i : Fin m) (j : Fin n) :
     affineLinear A x b i j = Finset.sum Finset.univ (fun l => A i l * x l j) + b i j := by
-  simp [affineLinear]
-  unfold MatMul
-  exact (congrArg (((fun i j => ∑ l, A i l * x l j) + b) i) ∘ fun a => a) rfl
+  simp [affineLinear, Matrix.mul_apply]
 
 
 @[simp] theorem relu_apply [Max t] [OfNat t 0]
     (x : Mat t m n) (i : Fin m) (j : Fin n) :
     ReLu x i j = Max.max 0 (x i j) := rfl
 
-  @[simp] theorem ReLu_eq_sup (x : Mat t m n) [Max t] [OfNat t 0] :
-      ReLu x = 0 ⊔ x := by
-    ext i j; simp [ReLu]
 
 
-@[simp] theorem MatAdd_apply {m n : Nat} (a b : Fin m → Fin n → Int) (i : Fin m) (j : Fin n) :
+@[simp] theorem MatAdd_apply {m n : Nat} (a b : Mat Int m n) (i : Fin m) (j : Fin n) :
     MatAdd a b i j = a i j + b i j := rfl
 
-@[simp] theorem MatMul_apply {m k n : Nat} (a : Fin m → Fin k → Int) (b : Fin k → Fin n → Int) (i : Fin m) (j : Fin n) :
+@[simp] theorem MatMul_apply {m k n : Nat} (a : Mat Int m k) (b : Mat Int k n) (i : Fin m) (j : Fin n) :
     MatMul a b i j = Finset.sum Finset.univ (fun l => a i l * b l j) := rfl
 
-@[simp] theorem MatZero_apply {t : Type} [OfNat t 0] {m n : Nat} (i : Fin m) (j : Fin n) :
+@[simp] theorem MatZero_apply {t : Type} [Zero t] {m n : Nat} (i : Fin m) (j : Fin n) :
     (MatZero : Mat t m n) i j = 0 := rfl
 
-@[simp] theorem MatAdd_eq_add {m n : Nat} (a b : Fin m → Fin n → Int) :
+@[simp] theorem MatAdd_eq_add {m n : Nat} (a b : Mat Int m n) :
     MatAdd a b = a + b := rfl
 
-@[simp] theorem MatMul_eq_mul {m n : Nat} [HMul t t t] [AddCommMonoid t]
+@[simp] theorem MatMul_eq_mul {m n : Nat} [Mul t] [AddCommMonoid t]
   (a : Mat t m k) (b : Mat t k n) :
     MatMul a b = a * b := rfl
 
 /-- Reduce `(a * b) i j` directly (needed because `MatMul_eq_mul` rewrites
     `MatMul` away before `MatMul_apply` can fire). -/
-@[simp] theorem mul_Mat_apply [HMul t t t] [AddCommMonoid t]
+@[simp] theorem mul_Mat_apply [Mul t] [AddCommMonoid t]
     (a : Mat t m k) (b : Mat t k n) (i : Fin m) (j : Fin n) :
     (a * b) i j = Finset.sum Finset.univ (fun l => a i l * b l j) := rfl
 
-@[simp] theorem add_Mat_apply [HAdd t t t]
+@[simp] theorem add_Mat_apply [Add t]
     (a b : Mat t m n) (i : Fin m) (j : Fin n) :
     (a + b) i j = a i j + b i j := rfl
 
@@ -259,6 +255,19 @@ theorem Mat_1_1_eq (f : Mat t 1 1) : f = Mat.mk fun _ _ => f 0 0 := by
     fun a b => inferInstanceAs (Decidable (a 0 0 ≤ b 0 0))
 
 /-! ### Scalar collapse lemmas for zeroth_hammer -/
+
+/-- An `if` between matrices, read at an entry. `ite_fun_apply` does this
+    for functions, and to `simp` a `Mat` is not one.
+
+    A pre-lemma (`↓`), so `simp` splits the `if` before it simplifies the
+    condition. The other way round, the condition is rewritten while a
+    `decide` inside it keeps the `Decidable` instance it was built with,
+    which states the old terms, and the lemma no longer matches: a counter
+    whose condition reads `(ctrl + 1) 0 0` kept its `if` between matrices. -/
+@[simp↓] theorem Mat_ite_apply {t : Type} {m n : Nat} (p : Prop) [inst : Decidable p]
+    (a b : Mat t m n) (i : Fin m) (j : Fin n) :
+    (if p then a else b) i j = if p then a i j else b i j := by
+  cases inst <;> rfl
 
 /-- Collapse `(fun _ _ => v) i j` to `v`. Fires after `ite_fun_apply` peels
     ite through Mat 1 1 constructors. -/

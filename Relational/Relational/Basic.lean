@@ -278,7 +278,7 @@ theorem rule_buchi_mat_nat
     -- then in next steps the value of `V` decreases
     --(h_rankpos: ∀ x y, V(s x y) ≥ 0)
     (h_rank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s')
-              → (V s' ≤ V s) ∧ (∃ x y, (V s') x y < (V s) x y)):
+              → (∀ x y, (V s') x y ≤ (V s) x y) ∧ (∃ x y, (V s') x y < (V s) x y)):
     -- Then then `B` holds infinitely many times
     ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
   apply rule_buchi lts B I hinv
@@ -304,7 +304,7 @@ theorem rule_buchi_mat_int
     -- then in next steps the value of `V` decreases
     (h_rankpos: ∀ s x y, (V s) x y ≥ 0)
     (h_rank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s')
-              → (V s' ≤ V s) ∧ (∃ x y, (V s') x y < (V s) x y)):
+              → (∀ x y, (V s') x y ≤ (V s) x y) ∧ (∃ x y, (V s') x y < (V s) x y)):
     -- Then then `B` holds infinitely many times
     ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
     apply rule_buchi_mat_nat lts B I hinv (fun s i j => (V s i j).toNat)
