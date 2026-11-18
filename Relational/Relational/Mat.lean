@@ -169,10 +169,10 @@ def argmax {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
 
 
 
-@[simp] theorem MatAdd_apply {m n : Nat} (a b : Mat Int m n) (i : Fin m) (j : Fin n) :
+@[simp↓] theorem MatAdd_apply {m n : Nat} (a b : Mat Int m n) (i : Fin m) (j : Fin n) :
     MatAdd a b i j = a i j + b i j := id rfl
 
-@[simp] theorem MatMul_apply {m k n : Nat} (a : Mat Int m k) (b : Mat Int k n) (i : Fin m) (j : Fin n) :
+@[simp↓] theorem MatMul_apply {m k n : Nat} (a : Mat Int m k) (b : Mat Int k n) (i : Fin m) (j : Fin n) :
     MatMul a b i j = Finset.sum Finset.univ (fun l => a i l * b l j) := id rfl
 
 @[simp↓] theorem MatZero_apply {t : Type} [Zero t] {m n : Nat} (i : Fin m) (j : Fin n) :
@@ -297,8 +297,8 @@ theorem Mat_1_1_eq (f : Mat t 1 1) : f = Mat.mk fun _ _ => f 0 0 := by
     (if p then a else b) i j = if p then a i j else b i j := by
   cases inst <;> rfl
 
-/-- Collapse `(fun _ _ => v) i j` to `v`. Fires after `ite_fun_apply` peels
-    ite through Mat 1 1 constructors. -/
+/-- Collapse `(fun _ _ => v) i j` to `v`. Generated code builds a constant
+    matrix as `Mat.mk fun _ _ => v`, which `Mat.mk_apply` reads. -/
 theorem fun_const_1_1_apply {t : Type} (v : t) (i : Fin 1) (j : Fin 1) :
     (fun (_ : Fin 1) (_ : Fin 1) => v) i j = v := rfl
 
