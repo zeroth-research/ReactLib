@@ -272,7 +272,7 @@ theorem rule_buchi_mat_nat
     (B : State → Prop) [DecidablePred B]      -- proposition `B`
     (I : StateSet State)                      -- invariant `I`
     (hinv : lts.StateSet_isInvariant I)
-    (V : State → (Mat Nat v₁ v₂))             -- ranking function on
+    (V : State → (Matrix (Fin v₁) (Fin v₂) Nat))             -- ranking function on
                                               -- (I ∧ ¬B)-states
     -- assume `V` is a **bounded** function such that whenever `B` does not hold,
     -- then in next steps the value of `V` decreases
@@ -298,7 +298,7 @@ theorem rule_buchi_mat_int
     (B : State → Prop) [DecidablePred B]      -- proposition `B`
     (I : StateSet State)                      -- invariant `I`
     (hinv : lts.StateSet_isInvariant I)
-    (V : State → (Mat Int v₁ v₂))             -- ranking function on
+    (V : State → (Matrix (Fin v₁) (Fin v₂) Int))             -- ranking function on
                                               -- (I ∧ ¬B)-states
     -- assume `V` is a **bounded** function such that whenever `B` does not hold,
     -- then in next steps the value of `V` decreases
