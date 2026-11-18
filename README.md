@@ -1,15 +1,18 @@
 # reactor-lean
 
 Lean libraries for [Reactor](https://github.com/zeroth-research/reactive-modules).
-Each library is a separate Lake package in its own directory:
+The libraries come in two Lake packages, each in its own directory:
 
-| Package | Modules | Contents |
-|---------|---------|----------|
-| [`Relational`](Relational) | `Relational.Mat`, `Relational.Box`, `Relational.LTL`, `Relational.Basic` | matrices, the box combinators over them, LTL, reactive modules and their proof rules |
-| [`LeanAI`](LeanAI) | `LeanAI`, `LeanAI.*` | the `ai_solve` tactic and its LLM backends |
+| Package | Library | Modules | Contents |
+|---------|---------|---------|----------|
+| [`ReactLib`](ReactLib) | `Spec` | `Spec.LTL` | LTL formulas and their semantics |
+| | `Relational` | `Relational.Mat`, `Relational.Box`, `Relational.Basic` | matrices, the box combinators over them, reactive modules and their proof rules |
+| [`LeanAI`](LeanAI) | `LeanAI` | `LeanAI`, `LeanAI.*` | the `ai_solve` tactic and its LLM backends |
 
-Both are pinned to `leanprover/lean4:v4.34.0`. `Relational` requires cslib at
-the same version, and gets Mathlib through it.
+Both are pinned to `leanprover/lean4:v4.34.0`. `ReactLib` requires cslib at
+the same version, and gets Mathlib through it. `LeanAI` needs nothing beyond
+Lean core, which is why it is a package of its own: requiring it does not
+fetch Mathlib.
 
 ## Using them
 
@@ -17,20 +20,21 @@ From a git checkout:
 
 ```toml
 [[require]]
-name = "Relational"
+name = "ReactLib"
 git = "https://github.com/zeroth-research/reactor-lean"
 rev = "<commit>"
-subDir = "Relational"
+subDir = "ReactLib"
 ```
 
 From a local checkout:
 
 ```toml
 [[require]]
-name = "Relational"
-path = "../reactor-lean/Relational"
+name = "ReactLib"
+path = "../reactor-lean/ReactLib"
 ```
 
-The projects `verith` generates require both packages from git. Set
-`REACTOR_LEAN` to a local checkout of this repository to make them
+Either way, the project can import the modules of both `Spec` and
+`Relational`. The projects `verith` generates require both packages from
+git. Set `REACTOR_LEAN` to a local checkout of this repository to make them
 require it by path instead.

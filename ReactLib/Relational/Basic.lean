@@ -1,6 +1,6 @@
 -- import Cslib.Foundations.Semantics.LTS.Basic
 import Cslib.Computability.Automata.NA.Basic
-import Relational.LTL
+import Spec.LTL
 import Relational.Box
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 
