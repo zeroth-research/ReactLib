@@ -1,4 +1,4 @@
-# reactor-lean
+# ReactLib
 
 Lean libraries for [Reactor](https://github.com/zeroth-research/reactive-modules).
 The libraries come in two Lake packages, each in its own directory:
@@ -21,7 +21,7 @@ From a git checkout:
 ```toml
 [[require]]
 name = "ReactLib"
-git = "https://github.com/zeroth-research/reactor-lean"
+git = "https://github.com/zeroth-research/ReactLib"
 rev = "<commit>"
 subDir = "ReactLib"
 ```
@@ -31,10 +31,10 @@ From a local checkout:
 ```toml
 [[require]]
 name = "ReactLib"
-path = "../reactor-lean/ReactLib"
+path = "../ReactLib/ReactLib"
 ```
 
 Either way, the project can import the modules of both `Spec` and
 `Relational`. The projects `verith` generates require both packages from
-git. Set `REACTOR_LEAN` to a local checkout of this repository to make them
+git. Set `REACTLIB` to a local checkout of this repository to make them
 require it by path instead.
