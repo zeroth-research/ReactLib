@@ -8,7 +8,7 @@ defaultTargets = ["Spec", "Relational"]
 name = "Spec"
 
 # Matrices (`Relational.Mat`), the box combinators over them
-# (`Relational.Box`) and reactive modules with their proof rules, stated in
+# (`Relational.Circ`) and reactive modules with their proof rules, stated in
 # `Spec`'s LTL (`Relational.Basic`).
 [[lean_lib]]
 name = "Relational"

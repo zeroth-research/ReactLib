@@ -22,7 +22,7 @@ import Mathlib.Data.Matrix.Mul
   A matrix of `m` rows and `n` columns is Mathlib's
   `Matrix (Fin m) (Fin n) t`; its `+`, `-`, `0`, `*` (the matrix product)
   and `Matrix.transpose` are Mathlib's. The `Box` combinators over matrices
-  live in `Relational.Box`.
+  live in `Relational.Circ`.
 -/
 
 /-- The matrix whose entry `(i, j)` is `f i j`: `Matrix.mk fun i j => …`.
