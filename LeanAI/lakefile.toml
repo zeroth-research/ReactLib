@@ -1,0 +1,8 @@
+name = "LeanAI"
+version = "0.1.0"
+defaultTargets = ["LeanAI"]
+
+# The `ai_solve` tactic and its LLM backends (Ollama, Claude, OpenAI).
+# Needs nothing beyond Lean core.
+[[lean_lib]]
+name = "LeanAI"

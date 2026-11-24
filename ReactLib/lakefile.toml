@@ -1,0 +1,21 @@
+name = "ReactLib"
+version = "0.1.0"
+defaultTargets = ["Spec", "Relational"]
+
+# Specifications: LTL formulas over ω-sequences of states and their
+# semantics (`Spec.LTL`).
+[[lean_lib]]
+name = "Spec"
+
+# Matrices (`Relational.Mat`), the box combinators over them
+# (`Relational.Circ`) and reactive modules with their proof rules, stated in
+# `Spec`'s LTL (`Relational.Basic`).
+[[lean_lib]]
+name = "Relational"
+
+# Mathlib comes through cslib, at the revision cslib pins. Reactor's
+# generated projects require the same cslib, so the two resolve as one.
+[[require]]
+name = "cslib"
+scope = "leanprover"
+rev = "v4.34.0"
