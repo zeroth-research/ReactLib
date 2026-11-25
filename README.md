@@ -6,7 +6,7 @@ The libraries come in two Lake packages, each in its own directory:
 | Package | Library | Modules | Contents |
 |---------|---------|---------|----------|
 | [`ReactLib`](ReactLib) | `Spec` | `Spec.LTL` | LTL formulas and their semantics |
-| | `Relational` | `Relational.Mat`, `Relational.Circ`, `Relational.Basic` | matrices, the box combinators over them, reactive modules and their proof rules |
+| | `Relational` | `Relational.Mat`, `Relational.Basic` | matrices, reactive modules and their proof rules |
 | [`LeanAI`](LeanAI) | `LeanAI` | `LeanAI`, `LeanAI.*` | the `ai_solve` tactic and its LLM backends |
 
 Both are pinned to `leanprover/lean4:v4.34.0`. `ReactLib` requires cslib at

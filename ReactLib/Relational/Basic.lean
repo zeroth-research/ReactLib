@@ -1,7 +1,7 @@
 -- import Cslib.Foundations.Semantics.LTS.Basic
 import Cslib.Computability.Automata.NA.Basic
 import Spec.LTL
-import Relational.Circ
+import Relational.Mat
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 
 /-  ----------------------------------------------------------------
