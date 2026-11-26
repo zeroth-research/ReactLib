@@ -3,5 +3,7 @@ import Relational.Basic
 import Relational.ReactiveTS
 import Relational.Module
 import Relational.Semantics
-import Relational.AG
+import Relational.AG.Defs
+import Relational.AG.Lemmas
+import Relational.AG.Rule
 import Relational.ProofRules

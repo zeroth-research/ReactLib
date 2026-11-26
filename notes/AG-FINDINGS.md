@@ -142,22 +142,64 @@ three files shows only headers and imports changed.
 
 ## Route to the AG rule
 
-**Target, stated in `Relational/AG.lean` (proofs `sorry`).**
-`Module.Implements P Q` is AH's Def. 3: (1) `Q.intf ⊆ P.intf`, (2)
-`Q.extl ⊆ P.obs`, (3) `P` has the await dependencies `Q.Awaits y x` of `Q`
-for `y ∈ Q.intf`, `x ∈ Q.obs` (`Module.Awaits` is the transitive closure of
-`Atom.dependsOn`), and (4) finite trace containment (`Module.FinTrace`). It
-is a preorder (`refl`, `trans`, proved). `Module.assume_guarantee` is AH's
-Prop. 5 over finite traces: well-formed `P₁ P₂ Q₁ Q₂`, the four composites
-`Composable`, each `Pⱼ` `Scoped` against `Qⱼ` (no private variable of one is
-a variable of the other; AH assume this by renaming, and the paper's
-`cor:ag-ah99` needs it as "scoping"), and the externals of `Q₁ ∥ Q₂`
-observable in `P₁ ∥ P₂`. `Module.assume_guarantee_trace` is the ω-trace
-version, which also assumes finite domains for the private variables of
-`Q₁` and `Q₂` (Step 6). Because (3) is in `Implements`, this is the rule
-with AH's await clause, not the unsound `thm:ag-sem` (Step 5): proving
-`assume_guarantee` needs Step 5, and `assume_guarantee_trace` Steps 5
-and 6.
+**Target, in `Relational/AG/` (`Defs`, `Lemmas`, `Rule`).**
+`Module.Implements P Q` (`AG/Defs.lean`) is AH's Def. 3: (1)
+`Q.intf ⊆ P.intf`, (2) `Q.extl ⊆ P.obs`, (3) `P` has the await dependencies
+`Q.Awaits y x` of `Q` for `y ∈ Q.intf`, `x ∈ Q.obs` (`Module.Awaits` is the
+transitive closure of `Atom.dependsOn`), and (4) finite trace containment
+(`Module.FinTrace`). It is a preorder (`refl`, `trans`, proved).
+`Module.assume_guarantee` (`AG/Rule.lean`) is AH's Prop. 5 over finite
+traces: well-formed `P₁ P₂ Q₁ Q₂`, the four composites `Composable`, and the
+externals of `Q₁ ∥ Q₂` observable in `P₁ ∥ P₂` (`hextl`).
+`Module.assume_guarantee_trace` is the ω-trace version, which also assumes
+finite domains for the private variables of `Q₁` and `Q₂` (Step 6). Because
+(3) is in `Implements`, this is the rule with AH's await clause, not the
+unsound `thm:ag-sem` (Step 5).
+
+**Status.** Clauses (1)–(3) of `assume_guarantee` are proved; (4), trace
+inclusion, and `assume_guarantee_trace` are `sorry`. The hypotheses are
+right: none is missing (no `Nonempty (Dom x)`: every state the proof builds
+modifies a state of the given run), and `hextl` is needed (add one unused
+external variable to both `Q₁` and `Q₂`). An earlier `Module.Scoped`
+hypothesis (AH's renaming of private variables apart) was dropped: `Pⱼ` and
+`Qⱼ` never run in the same state, so the four `Composable` hypotheses give
+every disjointness the proof uses.
+
+`AG/Lemmas.lean` has:
+
+- rounds: `Atom.Acyclic.exists_sorted` (topological order),
+  `Module.WF.exists_round` (complete a round whose atoms in an await-closed
+  set `K` already fire, for an abstract per-atom round predicate, so initial
+  and update rounds are treated once), and its `K = ∅` instances
+  `Module.WF.exists_initRound` / `exists_updateRound` (a well-formed module
+  never blocks);
+- await dependencies: `Module.WF.dependsOn_wf` (well-founded),
+  `Module.WF.awaits_split` (split an await chain at the non-private
+  variables into interface-to-observable segments `Module.Seg`);
+- clause (1) `Module.ag_intf`, and clause (3) `Module.ag_awaits` by AH's
+  stronger claim (`ag_awaits_link`: every chain of `P₁`/`P₂` steps and
+  `Q₁`/`Q₂` segments is an await dependency of `P₁ ∥ P₂`), by well-founded
+  induction along the dependencies of `P₁ ∥ P₂`. `ag_awaits_seg` is the form
+  the trace part uses.
+
+**Plan for clause (4)** (estimated 550–700 lines). Let `P := P₁ ∥ P₂` and
+`ss` a `P.FinRun n` agreeing with `ts` on `P.obs`; show `Q₁.FinTrace n ss`
+and `Q₂.FinTrace n ss` and glue them (`FinTrace.compose`). Outer induction on
+`k ≤ n`; inner induction over a topologically sorted list of `P.atoms`,
+atom by atom (not variable by variable: an atom writing `{y, w}` cannot be
+re-checked with only `y` fixed). With `Done S` the externals of `P` and the
+writes of the processed atoms `S`, the invariant is: for `j = 1, 2`, some
+`Qⱼ.FinRun k r` agrees with `ss` on `Qⱼ.obs` before `k` and on
+`Qⱼ.obs ∩ Done S` at `k` (`Module.PartialTrace`). `Done S` is closed under
+`P.Awaits`, hence under `Qⱼ.Seg` by `ag_awaits_seg`. Adding `A ∈ P₁.atoms`:
+(a) extend the `Q₂` run to `Done (S ∪ {A})` by re-firing the atoms of `Q₂`
+outside those that write (or await-depend on) interface variables in
+`Done`; (b) build a `P₁ ∥ Q₂` run from `ss` and that `Q₂` run with
+`exists_round`; (c) apply `h₁.traces` to it to get the new `Q₁` run.
+Still to write: `RoundAt`, `WF.finRun_congr`, `WF.writer_unique`,
+`complete_round`, `FinTrace.compose`, `Keep`/`Done` and their closure
+lemmas, `partialTrace_extend` (AH's fact (C)), and the core `ag_step`
+(150–200 lines), used twice by symmetry.
 
 The steps below are the route to it.
 
@@ -168,8 +210,9 @@ Build on the semantic `TS` layer, over a shared global state, with
 
 Steps 0–3 are fully proved in `notes/AG.lean` (about 280 lines, imports only
 `Relational.Basic`, no `sorry`, axioms `propext`, `Classical.choice`,
-`Quot.sound`). It is not part of the `Relational` library yet; the next move
-is to bring it in as `Relational/AG.lean`. Steps 4–6 are unchecked sketches.
+`Quot.sound`). They are not used by `Relational/AG/`: `Owns` fails for an
+atom that awaits its partner, and refinement there is full-state run
+inclusion. Steps 4–6 are sketches, partly superseded by the plan above.
 
 **Step 0 — refinement and the non-circular rule (trivial).**
 ```lean
@@ -237,7 +280,8 @@ runs) and `ωTrace_toTS_compose` (the same against `TS.compose`), and
 theorem Module.toTS_owns (hMoore : ∀ A ∈ M.atoms, A.await = ∅) :
     M.toTS.Owns (fun s => s.restrict M.ctrl)
 theorem Module.toTS_enabled (h : M.WF) : M.toTS.Enabled
-  -- from left-totality of atoms + acyclicity (topological firing order)
+  -- `step` is `Module.WF.exists_updateRound` (AG/Lemmas.lean); `start`
+  -- is `exists_initRound` given any state, so `∀ x, Nonempty (Dom x)`
 ```
 `glue` follows from `Composable` (disjoint controlled sets). With these,
 Step 3 gives AG for await-free modules, with refinement as run inclusion
@@ -273,8 +317,9 @@ domains for the spec's private variables (paper `lem:safety`(2), with a
 counterexample when they are infinite), and Alur–Henzinger's scoping side
 conditions. Defer it: keep private variables observable first.
 
-**Suggested order:** bring in Steps 0–3 as `Relational/AG.lean`;
-finish Step 4 (`toTS_owns`, `toTS_enabled`); then decide whether Step 5 or 6 is worth it.
+**Suggested order:** clause (4) of `assume_guarantee` (the plan above),
+then `assume_guarantee_trace` (Step 6, 250–400 lines: König's lemma over the
+finitely many private valuations per step, with `Trace.finTrace`).
 
 ## Paper material to reuse
 
