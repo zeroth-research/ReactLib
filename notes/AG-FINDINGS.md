@@ -24,7 +24,7 @@ Paths below are relative to `ReactLib/`.
 | 2 | Atoms cannot have state | **fixed** |
 | 3 | Private variables are never written | **fixed** |
 | 4 | Atoms are deterministic functions | **fixed**: left-total relations, `Atom.ofFun` |
-| 5 | `ReactiveTS.compose` is intersection, not parallel composition | open |
+| 5 | `ReactiveTS.compose` is intersection, not parallel composition | **renamed** to `composed_TS`; parallel composition is `Module.compose` |
 | 6 | Implicit `Name`/`Dom`; `compose` takes a proof | **fixed**: `Module Dom`, total `compose`, `Module.WF` |
 | 7 | Name sets as lists with `∩ = ∅` | **fixed**: `Finset` and `Disjoint` |
 | 8 | Off-by-one in `ReactiveTS.traces'` | **fixed** |
@@ -81,8 +81,12 @@ three files shows only headers and imports changed.
    but it is what makes composition non-blocking without reasoning about
    reachable states. Weaken it only if a real specification needs that.
 
-5. **`ReactiveTS.compose` is intersection, not parallel composition**
-   (`Relational/ReactiveTS.lean:111`). Both systems own the whole `State` and
+5. **Renamed — `ReactiveTS.compose` was intersection, not parallel
+   composition.** It is now `ReactiveTS.composed_TS`
+   (`Relational/ReactiveTS.lean:109`), with its lemmas `composed_TS_ωTrace`,
+   `composed_TS_traces` and `traces'_composed_TS`, so the name no longer
+   promises parallel composition; that is `Module.compose`, whose semantics
+   (`Relational/Semantics.lean`) has ownership through the atoms' write sets. Both systems own the whole `State` and
    are deterministic, so a joint step needs `A.update s l = B.update s l`. It
    means "both specs hold" and usually has no traces unless the systems agree.
    `TS.compose` (`Relational/Basic.lean:113`) is fine as language
@@ -125,7 +129,7 @@ three files shows only headers and imports changed.
 8. **Fixed — off-by-one in `ReactiveTS.traces'`.** It required
    `update_pre (inps i)` for all `i`, including `inps 0`, which is only the
    init input. It now requires `update_pre (inps (i + 1))`, matching the
-   input the update uses; `traces'_impl_traces` and `traces'_compose` use
+   input the update uses; `traces'_impl_traces` and `traces'_composed_TS` use
    `hi i` where they used `hi (i + 1)` to work around it.
 
 9. **Fixed — await acyclicity was atom-level only.** Alur–Henzinger's

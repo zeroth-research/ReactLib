@@ -108,28 +108,28 @@ theorem traces_to_TS (M: ReactiveTS Extl State):
 /- composition of two `ReactiveTS`s over the same inputs and states:
    the composition of their TSs. It is a TS and not a `ReactiveTS`,
    since two update functions cannot be merged into one. -/
-def compose (A B : ReactiveTS Extl State) : TS State Extl :=
+def composed_TS (A B : ReactiveTS Extl State) : TS State Extl :=
   A.toTS.compose B.toTS
 
 /- the traces of a composition are exactly the traces common to both
    systems -/
-theorem compose_ωTrace (A B : ReactiveTS Extl State) :
-    (A.compose B).ωTrace ss μs ↔ A.toTS.ωTrace ss μs ∧ B.toTS.ωTrace ss μs :=
+theorem composed_TS_ωTrace (A B : ReactiveTS Extl State) :
+    (A.composed_TS B).ωTrace ss μs ↔ A.toTS.ωTrace ss μs ∧ B.toTS.ωTrace ss μs :=
   TS.ωTrace_compose _ _
 
 /- a trace of the composition is a trace of both systems -/
-theorem compose_traces (A B : ReactiveTS Extl State) :
-    (∃ μs, (A.compose B).ωTrace ss μs) → A.traces ss ∧ B.traces ss := by
+theorem composed_TS_traces (A B : ReactiveTS Extl State) :
+    (∃ μs, (A.composed_TS B).ωTrace ss μs) → A.traces ss ∧ B.traces ss := by
   intro ⟨μs, h⟩
-  have ⟨hA, hB⟩ := (compose_ωTrace A B).mp h
+  have ⟨hA, hB⟩ := (composed_TS_ωTrace A B).mp h
   exact ⟨A.TS_traces ss μs hA, B.TS_traces ss μs hB⟩
 
 /- a trace of both systems for the same inputs is a trace of the
    composition -/
-theorem traces'_compose (A B : ReactiveTS Extl State)
+theorem traces'_composed_TS (A B : ReactiveTS Extl State)
     (hA : A.traces' ss inps) (hB : B.traces' ss inps) :
-    (A.compose B).ωTrace ss (fun i => inps (i + 1)) := by
-  rw [compose_ωTrace]
+    (A.composed_TS B).ωTrace ss (fun i => inps (i + 1)) := by
+  rw [composed_TS_ωTrace]
   have tr : ∀ M : ReactiveTS Extl State, M.traces' ss inps →
       M.toTS.ωTrace ss (fun i => inps (i + 1)) := by
     intro M ⟨⟨hpre, h0⟩, hi⟩
