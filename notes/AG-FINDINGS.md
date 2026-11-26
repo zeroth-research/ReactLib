@@ -156,8 +156,8 @@ finite domains for the private variables of `Q₁` and `Q₂` (Step 6). Because
 (3) is in `Implements`, this is the rule with AH's await clause, not the
 unsound `thm:ag-sem` (Step 5).
 
-**Status.** Clauses (1)–(3) of `assume_guarantee` are proved; (4), trace
-inclusion, and `assume_guarantee_trace` are `sorry`. The hypotheses are
+**Status: both rules are proved**, with no `sorry` and only the axioms
+`propext`, `Classical.choice`, `Quot.sound`. The hypotheses are
 right: none is missing (no `Nonempty (Dom x)`: every state the proof builds
 modifies a state of the given run), and `hextl` is needed (add one unused
 external variable to both `Q₁` and `Q₂`). An earlier `Module.Scoped`
@@ -182,7 +182,7 @@ every disjointness the proof uses.
   induction along the dependencies of `P₁ ∥ P₂`. `ag_awaits_seg` is the form
   the trace part uses.
 
-**Plan for clause (4)** (estimated 550–700 lines). Let `P := P₁ ∥ P₂` and
+**Clause (4)**, `Module.ag_traces` in `AG/Traces.lean` (665 lines). Let `P := P₁ ∥ P₂` and
 `ss` a `P.FinRun n` agreeing with `ts` on `P.obs`; show `Q₁.FinTrace n ss`
 and `Q₂.FinTrace n ss` and glue them (`FinTrace.compose`). Outer induction on
 `k ≤ n`; inner induction over a topologically sorted list of `P.atoms`,
@@ -196,10 +196,22 @@ writes of the processed atoms `S`, the invariant is: for `j = 1, 2`, some
 outside those that write (or await-depend on) interface variables in
 `Done`; (b) build a `P₁ ∥ Q₂` run from `ss` and that `Q₂` run with
 `exists_round`; (c) apply `h₁.traces` to it to get the new `Q₁` run.
-Still to write: `RoundAt`, `WF.finRun_congr`, `WF.writer_unique`,
-`complete_round`, `FinTrace.compose`, `Keep`/`Done` and their closure
-lemmas, `partialTrace_extend` (AH's fact (C)), and the core `ag_step`
-(150–200 lines), used twice by symmetry.
+The pieces: `Atom.Step` (the round of an atom at position `k` of a run) with
+`finRun_iff`, `WF.finRun_congr`, `WF.writer_unique`, `WF.complete_step`,
+`FinTrace.compose`, `Keep`/`Done` and their closure lemmas,
+`partialTrace_extend` (AH's fact (C)), and the core `ag_step`. `ag_step`
+takes the premise as a statement about common runs of `M` and `N`, so it
+serves both the `P₁` and the `P₂` case without commuting compositions.
+Without `Scoped` an external variable of `P₁ ∥ P₂` may be private to `Qⱼ`,
+so each round starts by fixing only the externals outside `Qⱼ.ctrl`.
+
+**The ω-trace rule**, `Module.trace_of_finTraces` in `AG/Safety.lean` (174
+lines): the traces of a well-formed module whose private variables have
+finite domains form a safety property. Runs are normalised to agree with the
+trace outside the private variables (`Module.withPriv`; this needs `WF`, as
+atoms must look only at the module's variables, else an undeclared variable
+acts as a hidden infinite counter), and König's lemma for chains in a finite
+type (`exists_chain_of_finite`) picks a branch.
 
 The steps below are the route to it.
 
@@ -212,7 +224,7 @@ Steps 0–3 are fully proved in `notes/AG.lean` (about 280 lines, imports only
 `Relational.Basic`, no `sorry`, axioms `propext`, `Classical.choice`,
 `Quot.sound`). They are not used by `Relational/AG/`: `Owns` fails for an
 atom that awaits its partner, and refinement there is full-state run
-inclusion. Steps 4–6 are sketches, partly superseded by the plan above.
+inclusion. Steps 4–6 below are the original sketches, superseded by `Relational/AG/`.
 
 **Step 0 — refinement and the non-circular rule (trivial).**
 ```lean
@@ -317,9 +329,8 @@ domains for the spec's private variables (paper `lem:safety`(2), with a
 counterexample when they are infinite), and Alur–Henzinger's scoping side
 conditions. Defer it: keep private variables observable first.
 
-**Suggested order:** clause (4) of `assume_guarantee` (the plan above),
-then `assume_guarantee_trace` (Step 6, 250–400 lines: König's lemma over the
-finitely many private valuations per step, with `Trace.finTrace`).
+**Done:** Steps 5 and 6 are realised by `Relational/AG/` directly on
+modules (see the target above), without the `TS` layer of Steps 0–4.
 
 ## Paper material to reuse
 

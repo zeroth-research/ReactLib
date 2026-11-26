@@ -5,6 +5,7 @@ import Relational.Module
 import Relational.Semantics
 import Relational.AG.Defs
 import Relational.AG.Lemmas
+import Relational.AG.Traces
 import Relational.AG.Safety
 import Relational.AG.Rule
 import Relational.ProofRules

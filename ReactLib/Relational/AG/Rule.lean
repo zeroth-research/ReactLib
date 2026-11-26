@@ -1,4 +1,4 @@
-import Relational.AG.Lemmas
+import Relational.AG.Traces
 import Relational.AG.Safety
 
 /-!
@@ -15,8 +15,9 @@ import Relational.AG.Safety
   specification. This is not needed: `Pⱼ` and `Qⱼ` are never composed, and the
   four `Composable` hypotheses give every disjointness the proof uses.
 
-  Clauses (1)–(3) of `Module.assume_guarantee` are proved; trace inclusion
-  (clause (4)) is `sorry`. `Module.assume_guarantee_trace` follows from it by
+  Clauses (1) and (3) of `Module.assume_guarantee` are in
+  `Relational.AG.Lemmas`, and trace inclusion (clause (4), `Module.ag_traces`)
+  in `Relational.AG.Traces`. `Module.assume_guarantee_trace` follows by
   König's lemma (`Module.trace_of_finTraces`, `Relational.AG.Safety`).
 -/
 
@@ -42,7 +43,7 @@ theorem Module.assume_guarantee {P₁ P₂ Q₁ Q₂ : Module Dom}
     exact Finset.union_subset_union i₁ i₂
   extl := hextl
   awaits := Module.ag_awaits wP₁ wP₂ wQ₁ wQ₂ hP hQ hP₁Q₂ hQ₁P₂ h₁ h₂
-  traces := sorry
+  traces := Module.ag_traces wP₁ wP₂ wQ₁ wQ₂ hP hQ hP₁Q₂ hQ₁P₂ hextl h₁ h₂
 
 /-- The assume-guarantee rule over ω-traces. Prefix containment gives
     ω-trace containment by König's lemma, which needs the private variables
