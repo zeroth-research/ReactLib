@@ -1,6 +1,6 @@
 name = "ReactLib"
 version = "0.1.0"
-defaultTargets = ["Spec", "Relational"]
+defaultTargets = ["Spec", "Relational", "Common"]
 
 # Specifications: LTL formulas over ω-sequences of states and their
 # semantics (`Spec.LTL`).
@@ -13,6 +13,11 @@ name = "Spec"
 # proof rules stated in `Spec`'s LTL (`Relational.ProofRules`).
 [[lean_lib]]
 name = "Relational"
+
+# Atoms and modules over named variables, their composition, and its
+# commutativity and associativity (`Common.Module`).
+[[lean_lib]]
+name = "Common"
 
 # Mathlib comes through cslib, at the revision cslib pins. Reactor's
 # generated projects require the same cslib, so the two resolve as one.

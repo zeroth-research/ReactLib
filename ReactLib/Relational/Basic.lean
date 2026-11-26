@@ -104,4 +104,38 @@ lemma trace_states_in_invariant
   apply hinv
   exact ⟨ss, μs, htr, x, rfl⟩
 
+/-  ----------------------------------------------------------------
+ Composition of TSs
+ ----------------------------------------------------------------- -/
+
+/- synchronous composition of two TSs over the same states and labels:
+   a state is initial, and a step is possible, iff it is in both TSs -/
+def compose (A B : TS State Label) : TS State Label where
+  Tr s l s' := A.Tr s l s' ∧ B.Tr s l s'
+  start := A.start ∩ B.start
+
+/- the traces of a composition are exactly the traces common to both
+   components -/
+theorem ωTrace_compose (A B : TS State Label) :
+    (A.compose B).ωTrace ss μs ↔ A.ωTrace ss μs ∧ B.ωTrace ss μs := by
+  simp only [ωTrace, compose, Cslib.LTS.OmegaExecution]
+  constructor
+  · intro ⟨⟨h₁, h₂⟩, h⟩
+    exact ⟨⟨h₁, fun i => (h i).1⟩, ⟨h₂, fun i => (h i).2⟩⟩
+  · intro ⟨⟨h₁, h₁'⟩, ⟨h₂, h₂'⟩⟩
+    exact ⟨⟨h₁, h₂⟩, fun i => ⟨h₁' i, h₂' i⟩⟩
+
+/- state traces: the state sequences of the traces, labels forgotten -/
+def stateTraces (ts : TS State Label) (ss : Cslib.ωSequence State) : Prop :=
+  ∃ μs, ts.ωTrace ss μs
+
+/- the state traces of a composition are state traces of both components.
+   The converse does not hold in general: the two components may need
+   different labels for the same sequence of states. -/
+theorem stateTraces_compose (A B : TS State Label) :
+    (A.compose B).stateTraces ss → A.stateTraces ss ∧ B.stateTraces ss := by
+  intro ⟨μs, h⟩
+  have ⟨hA, hB⟩ := (ωTrace_compose A B).mp h
+  exact ⟨⟨μs, hA⟩, ⟨μs, hB⟩⟩
+
 end TS
