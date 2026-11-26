@@ -90,47 +90,6 @@ lemma drop_get_n (ss: Cslib.ωSequence α)
   : ∀ n x: Nat, ss.get (n + x) = (ss.drop n).get x :=
   fun n x => (Cslib.ωSequence.get_drop x n ss).symm
 
--- lemma semₙ_tail: ∀ F: (@LTLFormula State), F.semₙ tr.tail n ↔ F.semₙ tr (n + 1) := by
---   intro F
---   induction F generalizing n with
---   | AP a =>
---     simp [semₙ]
---     simp [Cslib.ωSequence.tail]
---     rfl
---   | Next a ih =>
---     simp [semₙ]
---     exact ih (n := n + 1)
---   | Or a b iha ihb =>
---     simp [semₙ]
---     exact ⟨fun h => h.elim (Or.inl ∘ iha.mp) (Or.inr ∘ ihb.mp),
---            fun h => h.elim (Or.inl ∘ iha.mpr) (Or.inr ∘ ihb.mpr)⟩
---   | And a b iha ihb =>
---     simp [semₙ]
---     exact ⟨fun ⟨ha, hb⟩ => ⟨iha.mp ha, ihb.mp hb⟩,
---            fun ⟨ha, hb⟩ => ⟨iha.mpr ha, ihb.mpr hb⟩⟩
---   | Not a ih => simp [semₙ]; exact ⟨fun h c => h (ih.mpr c), fun h c => h (ih.mp c)⟩
---   | Until a b iha ihb =>
---     simp [semₙ]
---     constructor
---     · rintro ⟨m, hm, hb, ha⟩
---       refine ⟨m + 1, by omega, ihb.mp hb, ?_⟩
---       refine fun j a a_1 => ?_
---       have ha_j1 := ha (j - 1) (by omega) (by omega)
---       have iha_j1 := @iha (j - 1)
---       rw [iha_j1] at ha_j1
---       have : j - 1 + 1 = j := by omega
---       rw [this] at ha_j1
---       exact ha_j1
---     · rintro ⟨m, hm, hb, ha⟩
---       refine ⟨m - 1, by omega, ?_, fun j hj1 hj2 => ?_⟩
---       · rw [ihb]
---         have : m - 1 + 1 = m := by omega
---         rwa [this]
---       · rw [iha]
---         have : j + 1 < m := by omega
---         have : n < j + 1 := by omega
---         exact ha (j + 1) this (by omega)
-
 theorem sem_semₙ_suffixes:
 ∀ φ: (@LTLFormula State), φ.sem (tr.drop n) ↔ φ.semₙ tr n := by
   intro φ

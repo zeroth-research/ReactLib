@@ -20,27 +20,16 @@ abbrev StateSet (State: Type u) := Set State
  ----------------------------------------------------------------- -/
 
 
-/-- Definition of transition system (TS).
- -- We use Cslib non-deterministic automata. -/
+/-- Definition of transition system (TS): a Cslib non-deterministic
+    automaton. -/
 structure TS (State: Type u) (Label: Type v) extends Cslib.Automata.NA State Label
 
-
-/- Trace is a wrapper around two omega sequences: sequence of states
- -- and sequence of labels
-structure Trace (ts: TS State Label) where
-  states: Cslib.ωSequence State
-  labels: Cslib.ωSequence Label
-
-  is_ts_trace: ts.OmegaExecution states labels
--/
 
 namespace TS
 
 -- Cslib's NA uses "start" for initial states, while it is common to call the
 -- states "initial" when talking about TSs'. Add this abbreviation.
 abbrev init (ts: TS State Label) := ts.start
-
---variable {State : Type u} {Label : Type v}
 
 /- initial infinite trace of an TS -/
 def ωTrace (ts : TS State Label)

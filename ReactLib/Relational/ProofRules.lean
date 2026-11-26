@@ -18,9 +18,9 @@ section proof_rules
 
 open LTLFormula
 
-/-- Proof rule saying that if a set of states S is invariant,
-    then `Globally S` holds on every trace
-    (S is state of sets which is the same as atomic proposition) -/
+/-- Proof rule saying that if a set of states `S` is invariant,
+    then `G S` holds on every trace (`S : StateSet State` is a `Set State`,
+    a predicate on states, so it is an atomic proposition). -/
 theorem rule_globally {State: Type u} {Label : Type v}
     (lts : TS State Label)
     (S : StateSet State)
@@ -46,7 +46,7 @@ theorem rule_buchi' {State: Type u} {Label : Type v}
     -- assume `V` is a function such that whenever `B` does not hold,
     -- then in next steps the value of `V` decreases
     (hrank : ∀ s s', I s → ¬(B s) → (∃ l, lts.Tr s l s') → V s' < V s) :
-    -- Then then `B` holds infinitely many times
+    -- Then `B` holds infinitely many times
     ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
   intro ss μs htr
   have hI := lts.trace_states_in_invariant I hinv htr
@@ -94,18 +94,17 @@ theorem rule_buchi {State: Type u} {Label : Type v}
     -- assume `V` is a function such that whenever `B` does not hold,
     -- then in next steps the value of `V` decreases
     (hrank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s') → V s' < V s) :
-    -- Then then `B` holds infinitely many times
+    -- Then `B` holds infinitely many times
     ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) :=
   rule_buchi' lts B I hinv V fun s s' a b c => hrank s s' ⟨a, b, c⟩
 
 
 /-- Every run of `A` is a run of `B`, so a `G`-property of `B` is one of `A`.
 
-    The `--fbk-proveit` route ends in a certificate about a *model* -- the NA
-    encoding `infer/fbk_proveit/na.py` writes and `lean2vmt` reads. This is
-    what carries that back to the module: `f` maps a module state to the
-    model's slots, `hinit`/`hstep` say the model admits every module step,
-    and the property comes back through `f`. Only one direction is needed,
+    A certificate about a *model* of a module (e.g. its NA encoding) carries
+    back to the module: `f` maps a module state to the model's state,
+    `hinit`/`hstep` say the model admits every module step, and the property
+    comes back through `f`. Only one direction is needed,
     because a model with *more* behaviours still satisfies `G Q` on fewer.
 
     `g` relabels. The two systems agree about states and need not agree
@@ -141,7 +140,7 @@ theorem rule_buchi_mat_nat
     -- decreases (its entries are natural numbers, so bounded below)
     (h_rank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s')
               → (∀ x y, (V s') x y ≤ (V s) x y) ∧ (∃ x y, (V s') x y < (V s) x y)):
-    -- Then then `B` holds infinitely many times
+    -- Then `B` holds infinitely many times
     ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
   apply rule_buchi lts B I hinv
     (fun s => Finset.sum Finset.univ (fun i => Finset.sum Finset.univ (fun j => (V s) i j)))
@@ -167,7 +166,7 @@ theorem rule_buchi_mat_int
     (h_rankpos: ∀ s x y, (V s) x y ≥ 0)
     (h_rank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s')
               → (∀ x y, (V s') x y ≤ (V s) x y) ∧ (∃ x y, (V s') x y < (V s) x y)):
-    -- Then then `B` holds infinitely many times
+    -- Then `B` holds infinitely many times
     ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
     apply rule_buchi_mat_nat lts B I hinv (fun s i j => (V s i j).toNat)
     intro s s' ⟨hIs, hBs, htr⟩
@@ -179,19 +178,6 @@ theorem rule_buchi_mat_int
     · have := h_rankpos s x y
       have := h_rankpos s' x y
       omega
-
-
-
-/- theorem rule_LTL {State: Type u} {Label : Type v} -- [DecidableEq State] -/
-/-     (lts : TS State Label)                  -- the TS -/
-/-     (A_neg: Cslib.Automata.NA.Buchi)          -- buchi automaton representing negation of property -/
-/-     --(I : StateSet State)                      -- invariant `I` -/
-/-     -- (hinv : lts.StateSet_isInvariant I) -/
-/-     -- (V : State → Nat)                         -- ranking function on -/
-/-     : Accept (lts ∩ A_neg) ↔  -/
-
-
-
 
 
 end proof_rules

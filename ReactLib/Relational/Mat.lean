@@ -74,9 +74,7 @@ def ReLu [Max t] [OfNat t 0] (x : Matrix (Fin m) (Fin n) t) : Matrix (Fin m) (Fi
     rather than `List.finRange`, and the difference is not cosmetic: the
     certificates' `simp_mat` carries `List.ofFn_succ` and `List.ofFn_zero`
     and no lemma that computes `List.finRange`, so a `finRange` fold stays
-    stuck in the goal at every concrete shape and every closer fails on it
-    (fixed in `be70a43`). Row-major order, seeds and tie-breaking are
-    exactly as they were. -/
+    stuck in the goal at every concrete shape and every closer fails on it. -/
 
 /-- Reduce a matrix to its minimum, packed as a 1×1 matrix.
     Folds row-major from element `(0,0)`; an empty matrix has no minimum and
@@ -179,25 +177,6 @@ def argmax {t : Type} [LT t] [DecidableRel ((· < ·) : t → t → Prop)]
     (a : Matrix (Fin m) (Fin n) t) (i : Fin n) (j : Fin m) :
     Matrix.transpose a i j = a j i := id rfl
 
--- This complicates the proofs..
-/- coercion between single-element matrix and the element -/
--- instance {t: Type} : Coe t (Matrix (Fin 1) (Fin 1) t) where
---   coe x := fun _ _ => x
-
--- instance : Coe (Matrix (Fin 1) (Fin 1) Bool) Bool where
---   coe m := m 0 0
-
--- instance : Coe (Matrix (Fin 1) (Fin 1) Real) Real where
---   coe m := m 0 0
-
--- instance : Coe (Matrix (Fin 1) (Fin 1) Int) Int where
---   coe m := m 0 0
-
-/- break ValTuple...
-instance {t: Type} : Coe (Matrix (Fin 1) (Fin 1) t) t where
-  coe m := m 0 0
--/
-
 instance : Coe Bool (Matrix (Fin 1) (Fin 1) Bool) where
   coe x := Matrix.mk fun _ _ => x
 
@@ -206,7 +185,6 @@ instance : Coe (Matrix (Fin 1) (Fin 1) Bool) Bool where
 
 
 
-/- this might be necessary to automate the proofs -/
 @[simp] theorem coe_bool_mat (b : Bool) :
   Coe.coe b = (Matrix.mk fun _ _ => b : Matrix (Fin 1) (Fin 1) Bool) := by rfl
 
@@ -223,10 +201,6 @@ theorem Matrix_1_1_eq (f : Matrix (Fin 1) (Fin 1) t) : f = Matrix.mk fun _ _ => 
 @[simp] theorem Matrix_1_1_eq_iff {t : Type} (a b : Matrix (Fin 1) (Fin 1) t) :
     (a = b) ↔ (a 0 0 = b 0 0) := by
   simp only [← Matrix.ext_iff, Fin.forall_fin_one]
-
-/- theorem ite_Matrix_1_1 (p : Prop) [Decidable p] (a b : Matrix (Fin 1) (Fin 1) t) : -/
-/-       (if p then a else b) = fun _ _ => if p then a 0 0 else b 0 0 := by -/
-/-     ext i j; fin_cases i; fin_cases j; split <;> rfl -/
 
   instance [LT t] : LT (Matrix (Fin 1) (Fin 1) t) where
     lt a b := a 0 0 < b 0 0

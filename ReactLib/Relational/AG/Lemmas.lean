@@ -112,8 +112,8 @@ variable [DecidableEq Name]
 
 /-- Completing a partial round: if the atoms in `K` (closed under awaits) already
     fire in `t`, then all atoms fire in some `t'` that agrees with `t` outside the
-    controlled variables and on the variables written by `K`. With `K = ∅` this is
-    non-blockingness of a round. -/
+    controlled variables and on the variables written by `K`. With `K` false
+    everywhere this is non-blockingness of a round. -/
 theorem Module.WF.exists_round {M : Module Dom} (hM : M.WF)
     (R : Atom Dom → State Dom → Prop)
     (hcongr : ∀ A (t t' : State Dom), (∀ x ∈ A.await, t x = t' x) → (∀ x ∈ A.write, t x = t' x) →
