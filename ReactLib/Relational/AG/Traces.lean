@@ -176,6 +176,42 @@ theorem Module.WF.complete_step {M : Module Dom} (hM : M.WF) (r : Nat → State 
     (fun _ _ _ ha hw h => h.congr (fun _ _ _ _ => rfl) ha hw)
     (fun A t => A.exists_step r k t) K hK t hKt
 
+/-- The state that takes the private variables of `M₁` from `s₁`, those of
+    `M₂` from `s₂`, and all other names from `t`: it glues runs of two
+    composable modules that agree with `t` on their observable variables. -/
+def Module.glue (M₁ M₂ : Module Dom) (s₁ s₂ t : State Dom) : State Dom :=
+  fun x => if x ∈ M₁.priv then s₁ x else if x ∈ M₂.priv then s₂ x else t x
+
+theorem Module.Composable.glue_left {M₁ M₂ : Module Dom} (hc : M₁.Composable M₂)
+    {s₁ s₂ t : State Dom} (ho : ∀ x ∈ M₁.obs, s₁ x = t x) :
+    ∀ x ∈ M₁.vars, s₁ x = M₁.glue M₂ s₁ s₂ t x := by
+  intro x hx
+  by_cases hp : x ∈ M₁.priv
+  · simp [Module.glue, hp]
+  · have hp₂ : x ∉ M₂.priv := fun h => Finset.disjoint_left.mp hc.priv₂_disj h hx
+    simp [Module.glue, hp, hp₂, ho x (Module.mem_obs_of_not_priv hx hp)]
+
+theorem Module.Composable.glue_right {M₁ M₂ : Module Dom} (hc : M₁.Composable M₂)
+    {s₁ s₂ t : State Dom} (ho : ∀ x ∈ M₂.obs, s₂ x = t x) :
+    ∀ x ∈ M₂.vars, s₂ x = M₁.glue M₂ s₁ s₂ t x := by
+  intro x hx
+  have hp₁ : x ∉ M₁.priv := fun h => Finset.disjoint_left.mp hc.priv₁_disj h hx
+  by_cases hp : x ∈ M₂.priv
+  · simp [Module.glue, hp, hp₁]
+  · simp [Module.glue, hp, hp₁, ho x (Module.mem_obs_of_not_priv hx hp)]
+
+/-- On the observable variables of the composition, the glued state is `t`. -/
+theorem Module.WF.glue_obs {M₁ M₂ : Module Dom} (w : (M₁.compose M₂).WF)
+    (s₁ s₂ t : State Dom) {x : Name} (hx : x ∈ (M₁.compose M₂).obs) :
+    M₁.glue M₂ s₁ s₂ t x = t x := by
+  have hp : x ∉ (M₁.compose M₂).priv := by
+    intro hp
+    rcases Finset.mem_union.mp hx with h | h
+    · exact Finset.disjoint_left.mp w.intf_priv_disj h hp
+    · exact Finset.disjoint_left.mp w.extl_priv_disj h hp
+  simp only [Module.compose, Finset.mem_union, not_or] at hp
+  simp [Module.glue, hp.1, hp.2]
+
 /-- A common trace of two composable modules is a trace of their composition:
     the converse of `Module.Trace.of_compose` for finite traces. The runs of
     the components are glued along their private variables. -/
@@ -184,30 +220,11 @@ theorem Module.FinTrace.compose {M₁ M₂ : Module Dom} (h₁ : M₁.WF) (h₂ 
     (t₁ : M₁.FinTrace n ts) (t₂ : M₂.FinTrace n ts) : (M₁.compose M₂).FinTrace n ts := by
   obtain ⟨r₁, hr₁, ho₁⟩ := t₁
   obtain ⟨r₂, hr₂, ho₂⟩ := t₂
-  let rr : Nat → State Dom := fun i x =>
-    if x ∈ M₁.priv then r₁ i x else if x ∈ M₂.priv then r₂ i x else ts i x
-  have e₁ : ∀ i ≤ n, ∀ x ∈ M₁.vars, r₁ i x = rr i x := by
-    intro i hi x hx
-    by_cases hp : x ∈ M₁.priv
-    · simp [rr, hp]
-    · have hp₂ : x ∉ M₂.priv := fun h => Finset.disjoint_left.mp hc.priv₂_disj h hx
-      simp [rr, hp, hp₂, ho₁ i hi x (Module.mem_obs_of_not_priv hx hp)]
-  have e₂ : ∀ i ≤ n, ∀ x ∈ M₂.vars, r₂ i x = rr i x := by
-    intro i hi x hx
-    have hp₁ : x ∉ M₁.priv := fun h => Finset.disjoint_left.mp hc.priv₁_disj h hx
-    by_cases hp : x ∈ M₂.priv
-    · simp [rr, hp, hp₁]
-    · simp [rr, hp, hp₁, ho₂ i hi x (Module.mem_obs_of_not_priv hx hp)]
-  refine ⟨rr, (Module.finRun_compose M₁ M₂ n rr).mpr
-    ⟨h₁.finRun_congr e₁ hr₁, h₂.finRun_congr e₂ hr₂⟩, fun i hi x hx => ?_⟩
-  have w := h₁.compose h₂ hc
-  have hp : x ∉ (M₁.compose M₂).priv := by
-    intro hp
-    rcases Finset.mem_union.mp hx with h | h
-    · exact Finset.disjoint_left.mp w.intf_priv_disj h hp
-    · exact Finset.disjoint_left.mp w.extl_priv_disj h hp
-  simp only [Module.compose, Finset.mem_union, not_or] at hp
-  simp [rr, hp.1, hp.2]
+  let rr i := M₁.glue M₂ (r₁ i) (r₂ i) (ts i)
+  exact ⟨rr, (Module.finRun_compose M₁ M₂ n rr).mpr
+    ⟨h₁.finRun_congr (fun i hi => hc.glue_left (ho₁ i hi)) hr₁,
+     h₂.finRun_congr (fun i hi => hc.glue_right (ho₂ i hi)) hr₂⟩,
+    fun i _ x hx => (h₁.compose h₂ hc).glue_obs _ _ _ hx⟩
 
 /-- A common trace of two composable modules is a trace of their composition
     [AH99, Prop. 3]: the converse of `Module.Trace.of_compose`. -/
@@ -216,32 +233,11 @@ theorem Module.Trace.compose {M₁ M₂ : Module Dom} (h₁ : M₁.WF) (h₂ : M
     (t₁ : M₁.Trace ts) (t₂ : M₂.Trace ts) : (M₁.compose M₂).Trace ts := by
   obtain ⟨r₁, hr₁, ho₁⟩ := t₁
   obtain ⟨r₂, hr₂, ho₂⟩ := t₂
-  let rr : Cslib.ωSequence (State Dom) := ⟨fun i x =>
-    if x ∈ M₁.priv then r₁ i x else if x ∈ M₂.priv then r₂ i x else ts i x⟩
-  have e₁ : ∀ i, ∀ x ∈ M₁.vars, r₁ i x = rr i x := by
-    intro i x hx
-    by_cases hp : x ∈ M₁.priv
-    · simp [rr, hp]
-    · have hp₂ : x ∉ M₂.priv := fun h => Finset.disjoint_left.mp hc.priv₂_disj h hx
-      simp [rr, hp, hp₂, ho₁ i x (Module.mem_obs_of_not_priv hx hp)]
-  have e₂ : ∀ i, ∀ x ∈ M₂.vars, r₂ i x = rr i x := by
-    intro i x hx
-    have hp₁ : x ∉ M₁.priv := fun h => Finset.disjoint_left.mp hc.priv₁_disj h hx
-    by_cases hp : x ∈ M₂.priv
-    · simp [rr, hp, hp₁]
-    · simp [rr, hp, hp₁, ho₂ i x (Module.mem_obs_of_not_priv hx hp)]
-  refine ⟨rr, (Module.run_compose M₁ M₂ rr).mpr
-    ⟨.of_finRun fun n => h₁.finRun_congr (fun i _ => e₁ i) (hr₁.finRun n),
-     .of_finRun fun n => h₂.finRun_congr (fun i _ => e₂ i) (hr₂.finRun n)⟩,
-    fun i x hx => ?_⟩
-  have w := h₁.compose h₂ hc
-  have hp : x ∉ (M₁.compose M₂).priv := by
-    intro hp
-    rcases Finset.mem_union.mp hx with h | h
-    · exact Finset.disjoint_left.mp w.intf_priv_disj h hp
-    · exact Finset.disjoint_left.mp w.extl_priv_disj h hp
-  simp only [Module.compose, Finset.mem_union, not_or] at hp
-  simp [rr, hp.1, hp.2]
+  let rr : Cslib.ωSequence (State Dom) := ⟨fun i => M₁.glue M₂ (r₁ i) (r₂ i) (ts i)⟩
+  exact ⟨rr, (Module.run_compose M₁ M₂ rr).mpr
+    ⟨.of_finRun fun n => h₁.finRun_congr (fun i _ => hc.glue_left (ho₁ i)) (hr₁.finRun n),
+     .of_finRun fun n => h₂.finRun_congr (fun i _ => hc.glue_right (ho₂ i)) (hr₂.finRun n)⟩,
+    fun i x hx => (h₁.compose h₂ hc).glue_obs _ _ _ hx⟩
 
 /-! ### Partial traces -/
 
