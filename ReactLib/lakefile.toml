@@ -8,8 +8,8 @@ defaultTargets = ["Spec", "Relational", "Common"]
 name = "Spec"
 
 # Matrices (`Relational.Mat`), transition systems (`Relational.Basic`),
-# reactive modules with their transition-system semantics
-# (`Relational.Module`) and proof rules stated in `Spec`'s LTL
+# reactive transition systems with their transition-system semantics
+# (`Relational.ReactiveTS`) and proof rules stated in `Spec`'s LTL
 # (`Relational.ProofRules`).
 [[lean_lib]]
 name = "Relational"
