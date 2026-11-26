@@ -20,8 +20,9 @@ variable {Name : Type}
 -- domain for names (mapping names to their types)
 variable {Dom : Name → Type u}
 
-/-- A valuation of the names `X` (a state, or a part of one). -/
-abbrev Val (Dom : Name → Type u) (X : Finset Name) := ∀ x ∈ X, Dom x
+/-- A valuation of the names `X` (a state, or a part of one): a function on
+    the elements of `X`, as in Mathlib's `Finset.restrict`. -/
+abbrev Val (Dom : Name → Type u) (X : Finset Name) := (x : X) → Dom x
 
 structure Atom (Dom : Name → Type u) where
   -- sets of names, *not* variables with different versions

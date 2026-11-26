@@ -1,5 +1,6 @@
 import Relational.Basic
 import Relational.Module
+import Mathlib.Data.Finset.Pi
 
 /-!
   The semantics of a reactive module (`Relational.Module`): rounds, runs and
@@ -29,8 +30,11 @@ variable {Name : Type} {Dom : Name → Type u}
 abbrev State (Dom : Name → Type u) := ∀ x, Dom x
 
 /-- The part of the state `s` on the names `X`. -/
-def State.restrict (s : State Dom) (X : Finset Name) : Val Dom X :=
-  fun x _ => s x
+abbrev State.restrict (s : State Dom) (X : Finset Name) : Val Dom X :=
+  X.restrict s
+
+@[simp] theorem State.restrict_apply (s : State Dom) (X : Finset Name) (x : X) :
+    s.restrict X x = s x := rfl
 
 /-! ### Rounds -/
 
@@ -60,9 +64,9 @@ theorem Atom.Init.congr {A : Atom Dom} {t t' : State Dom}
     (ha : ∀ x ∈ A.await, t x = t' x) (hw : ∀ x ∈ A.write, t x = t' x)
     (h : A.Init t) : A.Init t' := by
   have e₁ : t.restrict A.await = t'.restrict A.await := by
-    funext x hx; exact ha x hx
+    funext ⟨x, hx⟩; exact ha x hx
   have e₂ : t.restrict A.write = t'.restrict A.write := by
-    funext x hx; exact hw x hx
+    funext ⟨x, hx⟩; exact hw x hx
   simpa [Atom.Init, e₁, e₂] using h
 
 /-- An atom's update round depends only on the old values of the variables
@@ -72,11 +76,11 @@ theorem Atom.Update.congr {A : Atom Dom} {s s' t t' : State Dom}
     (ha : ∀ x ∈ A.await, t x = t' x) (hw : ∀ x ∈ A.write, t x = t' x)
     (h : A.Update s t) : A.Update s' t' := by
   have e₀ : s.restrict A.read = s'.restrict A.read := by
-    funext x hx; exact hr x hx
+    funext ⟨x, hx⟩; exact hr x hx
   have e₁ : t.restrict A.await = t'.restrict A.await := by
-    funext x hx; exact ha x hx
+    funext ⟨x, hx⟩; exact ha x hx
   have e₂ : t.restrict A.write = t'.restrict A.write := by
-    funext x hx; exact hw x hx
+    funext ⟨x, hx⟩; exact hw x hx
   simpa [Atom.Update, e₀, e₁, e₂] using h
 
 section Locality

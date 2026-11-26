@@ -92,31 +92,12 @@ theorem exists_chain_of_finite_branching {V : Type*} (R₀ : V → Prop)
 
 variable {Name : Type} {Dom : Name → Type u}
 
-/-- The valuations of finitely many variables with finite domains are
-    finitely many. -/
-theorem Val.finite {X : Finset Name} (hfin : ∀ x ∈ X, Finite (Dom x)) :
-    Finite (Val Dom X) := by
-  have : ∀ x : X, Finite (Dom x.1) := fun x => hfin x.1 x.2
-  refine Finite.of_injective (fun (v : Val Dom X) (x : X) => v x.1 x.2) fun v w hvw => ?_
-  funext x hx
-  exact congrFun hvw ⟨x, hx⟩
-
-/-- A set of valuations is finite when each variable takes finitely many
-    values in it. -/
-theorem Val.finite_image_of_coord {α : Type*} {X : Finset Name} (S : Set α)
-    (f : α → Val Dom X)
-    (h : ∀ x (hx : x ∈ X), ((fun a => f a x hx) '' S).Finite) : (f '' S).Finite := by
-  let G : Val Dom X → (∀ x : X, Dom x.1) := fun v x => v x.1 x.2
-  have hG : Function.Injective G := fun v w hvw => funext₂ fun x hx => congrFun hvw ⟨x, hx⟩
-  refine .of_finite_image (Set.forall_finite_image_eval_iff.mp fun x => ?_) hG.injOn
-  simpa [Set.image_image, G] using h x.1 x.2
-
 variable [DecidableEq Name]
 
 /-- The state with the private variables of `M` as in `v` and all other
     names as in `t`. -/
 def Module.withPriv (M : Module Dom) (t : State Dom) (v : Val Dom M.priv) : State Dom :=
-  fun x => if h : x ∈ M.priv then v x h else t x
+  fun x => if h : x ∈ M.priv then v ⟨x, h⟩ else t x
 
 /-- A state that agrees with `t` on the observable variables of a
     well-formed module `M` agrees on the variables of `M` with `t` taking its
@@ -125,7 +106,7 @@ theorem Module.WF.withPriv_eq {M : Module Dom} {s t : State Dom}
     (hobs : ∀ x ∈ M.obs, s x = t x) {x : Name} (hx : x ∈ M.vars) :
     M.withPriv t (s.restrict M.priv) x = s x := by
   by_cases hp : x ∈ M.priv
-  · simp [Module.withPriv, hp, State.restrict]
+  · simp [Module.withPriv, hp]
   · have : x ∈ M.obs := by
       simp only [Module.vars, Module.obs, Finset.mem_union] at hx ⊢
       tauto
@@ -145,7 +126,7 @@ structure Module.FinBranching (M : Module Dom) : Prop where
     branching. -/
 theorem Module.FinBranching.of_finite {M : Module Dom}
     (hfin : ∀ x ∈ M.priv, Finite (Dom x)) : M.FinBranching :=
-  have := Val.finite hfin
+  have : ∀ x : M.priv, Finite (Dom x) := fun x => hfin x x.2
   ⟨fun _ => Set.toFinite _, fun _ _ => Set.toFinite _⟩
 
 /-- The traces of a well-formed, finitely branching module are a safety
@@ -187,7 +168,7 @@ theorem Module.trace_of_finTraces {M : Module Dom} (hM : M.WF)
 theorem Module.Composable.withPriv_left {M₁ M₂ : Module Dom} (hc : M₁.Composable M₂)
     (t : State Dom) (v : Val Dom (M₁.compose M₂).priv) {x : Name} (hx : x ∈ M₁.vars) :
     (M₁.compose M₂).withPriv t v x =
-      M₁.withPriv t (fun y hy => v y (Finset.mem_union_left _ hy)) x := by
+      M₁.withPriv t (fun y => v ⟨y, Finset.mem_union_left _ y.2⟩) x := by
   by_cases h₁ : x ∈ M₁.priv
   · simp [Module.withPriv, Module.compose, h₁]
   · have h₂ : x ∉ M₂.priv := fun h => Finset.disjoint_left.mp hc.priv₂_disj h hx
@@ -196,7 +177,7 @@ theorem Module.Composable.withPriv_left {M₁ M₂ : Module Dom} (hc : M₁.Comp
 theorem Module.Composable.withPriv_right {M₁ M₂ : Module Dom} (hc : M₁.Composable M₂)
     (t : State Dom) (v : Val Dom (M₁.compose M₂).priv) {x : Name} (hx : x ∈ M₂.vars) :
     (M₁.compose M₂).withPriv t v x =
-      M₂.withPriv t (fun y hy => v y (Finset.mem_union_right _ hy)) x := by
+      M₂.withPriv t (fun y => v ⟨y, Finset.mem_union_right _ y.2⟩) x := by
   by_cases h₂ : x ∈ M₂.priv
   · simp [Module.withPriv, Module.compose, h₂]
   · have h₁ : x ∉ M₁.priv := fun h => Finset.disjoint_left.mp hc.priv₁_disj h hx
@@ -208,14 +189,14 @@ theorem Module.FinBranching.compose {M₁ M₂ : Module Dom} (w₁ : M₁.WF) (w
     (M₁.compose M₂).FinBranching := by
   -- a valuation of the private variables of `M₁ ∥ M₂` is a pair of valuations
   let φ : Val Dom (M₁.compose M₂).priv → Val Dom M₁.priv × Val Dom M₂.priv :=
-    fun v => (fun y hy => v y (Finset.mem_union_left _ hy),
-      fun y hy => v y (Finset.mem_union_right _ hy))
+    fun v => (fun y => v ⟨y, Finset.mem_union_left _ y.2⟩,
+      fun y => v ⟨y, Finset.mem_union_right _ y.2⟩)
   have hφ : Function.Injective φ := by
     intro v w hvw
-    funext x hx
+    funext ⟨x, hx⟩
     rcases Finset.mem_union.mp hx with hx' | hx'
-    · exact congrFun (congrFun (congrArg Prod.fst hvw) x) hx'
-    · exact congrFun (congrFun (congrArg Prod.snd hvw) x) hx'
+    · exact congrFun (congrArg Prod.fst hvw) ⟨x, hx'⟩
+    · exact congrFun (congrArg Prod.snd hvw) ⟨x, hx'⟩
   constructor
   · intro t
     refine (((h₁.init t).prod (h₂.init t)).preimage hφ.injOn).subset fun v hv => ?_
@@ -236,20 +217,20 @@ omit [DecidableEq Name] in
     `P`, it allows finitely many values of the variables it writes. -/
 structure Atom.FinBranching (A : Atom Dom) (P : Finset Name) : Prop where
   init : ∀ (a : Val Dom A.await) (t : State Dom),
-    {w : Val Dom A.write | A.init a w ∧ ∀ x hx, x ∉ P → w x hx = t x}.Finite
+    {w : Val Dom A.write | A.init a w ∧ ∀ x : A.write, ↑x ∉ P → w x = t x}.Finite
   update : ∀ (r : Val Dom A.read) (a : Val Dom A.await) (t : State Dom),
-    {w : Val Dom A.write | A.update r a w ∧ ∀ x hx, x ∉ P → w x hx = t x}.Finite
+    {w : Val Dom A.write | A.update r a w ∧ ∀ x : A.write, ↑x ∉ P → w x = t x}.Finite
 
 omit [DecidableEq Name] in
 /-- An atom that writes no variable of `P` is finitely branching in `P`. -/
 theorem Atom.FinBranching.of_disjoint {A : Atom Dom} {P : Finset Name}
     (hd : Disjoint A.write P) : A.FinBranching P := by
   have key : ∀ t : State Dom, ∀ w : Val Dom A.write,
-      (∀ x hx, x ∉ P → w x hx = t x) → w ∈ ({t.restrict A.write} : Set _) := by
+      (∀ x : A.write, ↑x ∉ P → w x = t x) → w ∈ ({t.restrict A.write} : Set _) := by
     intro t w hw
     refine Set.mem_singleton_iff.mpr ?_
-    funext x hx
-    exact hw x hx (Finset.disjoint_left.mp hd hx)
+    funext x
+    exact hw x (Finset.disjoint_left.mp hd x.2)
   exact ⟨fun a t => (Set.finite_singleton _).subset fun w hw => key t w hw.2,
     fun r a t => (Set.finite_singleton _).subset fun w hw => key t w hw.2⟩
 
@@ -269,17 +250,15 @@ omit [DecidableEq Name] in
 theorem Atom.FinBranching.of_finite {A : Atom Dom} {P : Finset Name}
     (hfin : ∀ x ∈ A.write, x ∈ P → Finite (Dom x)) : A.FinBranching P := by
   have key : ∀ t : State Dom,
-      {w : Val Dom A.write | ∀ x hx, x ∉ P → w x hx = t x}.Finite := by
+      {w : Val Dom A.write | ∀ x : A.write, ↑x ∉ P → w x = t x}.Finite := by
     intro t
-    have := Val.finite_image_of_coord
-      {w : Val Dom A.write | ∀ x hx, x ∉ P → w x hx = t x} id fun x hx => by
-        by_cases hP : x ∈ P
-        · have := hfin x hx hP
-          exact Set.toFinite _
-        · refine (Set.finite_singleton (t x)).subset ?_
-          rintro _ ⟨w, hw, rfl⟩
-          exact hw x hx hP
-    simpa using this
+    refine Set.forall_finite_image_eval_iff.mp fun x => ?_
+    by_cases hP : ↑x ∈ P
+    · have := hfin x x.2 hP
+      exact Set.toFinite _
+    · refine (Set.finite_singleton (t x)).subset ?_
+      rintro _ ⟨w, hw, rfl⟩
+      exact hw x hP
   exact ⟨fun a t => (key t).subset fun w hw => hw.2,
     fun r a t => (key t).subset fun w hw => hw.2⟩
 
@@ -291,7 +270,7 @@ theorem Atom.FinBranching.of_finite {A : Atom Dom} {P : Finset Name}
 theorem Module.WF.finite_round {M : Module Dom} (hM : M.WF)
     (rel : ∀ A : Atom Dom, Val Dom A.await → Val Dom A.write → Prop)
     (hrel : ∀ A ∈ M.atoms, ∀ (a : Val Dom A.await) (t : State Dom),
-      {w : Val Dom A.write | rel A a w ∧ ∀ x hx, x ∉ M.priv → w x hx = t x}.Finite)
+      {w : Val Dom A.write | rel A a w ∧ ∀ x : A.write, ↑x ∉ M.priv → w x = t x}.Finite)
     (t : State Dom) :
     {v : Val Dom M.priv | ∀ A ∈ M.atoms,
       rel A ((M.withPriv t v).restrict A.await)
@@ -302,7 +281,7 @@ theorem Module.WF.finite_round {M : Module Dom} (hM : M.WF)
   -- every private variable takes finitely many values, by induction along
   -- the await dependencies
   have key : ∀ x, ∀ hx : x ∈ M.priv,
-      ((fun v : Val Dom M.priv => v x hx) '' S).Finite := by
+      ((fun v : Val Dom M.priv => v ⟨x, hx⟩) '' S).Finite := by
     intro x
     induction x using hM.dependsOn_wf.induction with
     | _ x ih =>
@@ -311,24 +290,23 @@ theorem Module.WF.finite_round {M : Module Dom} (hM : M.WF)
       -- the variables `A` awaits take finitely many values
       have hAw : ((fun v : Val Dom M.priv =>
           (M.withPriv t v).restrict A.await) '' S).Finite := by
-        refine Val.finite_image_of_coord S _ fun y hy => ?_
+        refine Set.forall_finite_image_eval_iff.mp fun ⟨y, hy⟩ => ?_
+        rw [Set.image_image]
         by_cases hyp : y ∈ M.priv
         · refine (ih y ⟨A, hA, hxA, hy⟩ hyp).subset ?_
           rintro _ ⟨v, hv, rfl⟩
-          exact ⟨v, hv, by simp [State.restrict, Module.withPriv, hyp]⟩
+          exact ⟨v, hv, by simp [Module.withPriv, hyp]⟩
         · refine (Set.finite_singleton (t y)).subset ?_
           rintro _ ⟨v, hv, rfl⟩
-          simp [State.restrict, Module.withPriv, hyp]
+          simp [Module.withPriv, hyp]
       have hW := hAw.biUnion fun a _ => hrel A hA a t
-      refine (hW.image fun w => w x hxA).subset ?_
+      refine (hW.image fun w => w ⟨x, hxA⟩).subset ?_
       rintro _ ⟨v, hv, rfl⟩
-      refine ⟨(M.withPriv t v).restrict A.write, ?_,
-        by simp [State.restrict, Module.withPriv, hx]⟩
+      refine ⟨(M.withPriv t v).restrict A.write, ?_, by simp [Module.withPriv, hx]⟩
       simp only [Set.mem_iUnion]
       exact ⟨_, ⟨v, hv, rfl⟩, hv A hA,
-        fun y hy hyp => by simp [State.restrict, Module.withPriv, hyp]⟩
-  have := Val.finite_image_of_coord S id key
-  simpa using this
+        fun y hyp => by simp [Module.withPriv, hyp]⟩
+  exact Set.forall_finite_image_eval_iff.mp fun x => key x x.2
 
 /-- A well-formed module whose atoms are finitely branching in its private
     variables is finitely branching. -/
@@ -416,7 +394,7 @@ namespace Example
 
 /-- A deterministic counter over `Nat`. -/
 def counterAtom : Atom (fun _ : Unit => Nat) :=
-  Atom.ofFun ∅ {()} {()} (fun _ _ _ => 0) (fun r _ _ _ => r () (by simp) + 1) (by simp)
+  Atom.ofFun ∅ {()} {()} (fun _ _ => 0) (fun r _ _ => r ⟨(), by simp⟩ + 1) (by simp)
 
 /-- A module with a private counter and nothing else. -/
 def counter : Module (fun _ : Unit => Nat) where

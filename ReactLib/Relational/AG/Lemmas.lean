@@ -161,14 +161,14 @@ theorem Atom.exists_write (A : Atom Dom) (P : Val Dom A.await → Val Dom A.writ
     ∃ t' : State Dom, (∀ x, x ∉ A.write → t' x = t x) ∧
       P (t'.restrict A.await) (t'.restrict A.write) := by
   obtain ⟨w, hw⟩ := h
-  refine ⟨fun x => if h : x ∈ A.write then w x h else t x, fun x hx => by simp [hx], ?_⟩
-  have e₁ : State.restrict (fun x => if h : x ∈ A.write then w x h else t x) A.await
+  refine ⟨fun x => if h : x ∈ A.write then w ⟨x, h⟩ else t x, fun x hx => by simp [hx], ?_⟩
+  have e₁ : State.restrict (fun x => if h : x ∈ A.write then w ⟨x, h⟩ else t x) A.await
       = t.restrict A.await := by
-    funext x hx
-    simp [State.restrict, Finset.disjoint_left.mp A.await_write_disj hx]
-  have e₂ : State.restrict (fun x => if h : x ∈ A.write then w x h else t x) A.write = w := by
-    funext x hx
-    simp [State.restrict, hx]
+    funext ⟨x, hx⟩
+    simp [Finset.disjoint_left.mp A.await_write_disj hx]
+  have e₂ : State.restrict (fun x => if h : x ∈ A.write then w ⟨x, h⟩ else t x) A.write = w := by
+    funext ⟨x, hx⟩
+    simp [hx]
   rwa [e₁, e₂]
 
 theorem Atom.exists_init (A : Atom Dom) (t : State Dom) :
