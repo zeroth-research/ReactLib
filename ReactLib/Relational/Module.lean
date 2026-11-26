@@ -74,17 +74,10 @@ def Atom.Acyclic (As : List (Atom Dom)) : Prop :=
   ∀ a ∈ As, ¬ Relation.TransGen (fun a b => a ∈ As ∧ b ∈ As ∧ a.awaits b) a a
 
 theorem Atom.Acyclic.of_subset {As Bs : List (Atom Dom)}
-    (hsub : As ⊆ Bs) (h : Atom.Acyclic Bs) : Atom.Acyclic As := by
-  intro a ha hcyc
-  apply h a (hsub ha)
+    (hsub : As ⊆ Bs) (h : Atom.Acyclic Bs) : Atom.Acyclic As :=
   -- every edge among `As` is an edge among `Bs`
-  have : ∀ {x y}, Relation.TransGen (fun a b => a ∈ As ∧ b ∈ As ∧ a.awaits b) x y →
-      Relation.TransGen (fun a b => a ∈ Bs ∧ b ∈ Bs ∧ a.awaits b) x y := by
-    intro x y hxy
-    induction hxy with
-    | single h => exact .single ⟨hsub h.1, hsub h.2.1, h.2.2⟩
-    | tail _ h ih => exact .tail ih ⟨hsub h.1, hsub h.2.1, h.2.2⟩
-  exact this hcyc
+  fun a ha hcyc => h a (hsub ha)
+    (Relation.TransGen.mono (fun _ _ h => ⟨hsub h.1, hsub h.2.1, h.2.2⟩) _ _ hcyc)
 
 theorem Atom.Acyclic.congr {As Bs : List (Atom Dom)}
     (hmem : ∀ a, a ∈ As ↔ a ∈ Bs) (h : Atom.Acyclic Bs) : Atom.Acyclic As :=
@@ -159,12 +152,13 @@ def Module.ctrl (M : Module Dom) : Finset Name := M.intf ∪ M.priv
 /-- All variables of a module. -/
 def Module.vars (M : Module Dom) : Finset Name := M.extl ∪ M.priv ∪ M.intf
 
+open Function in
 /-- A well-formed module. -/
 structure Module.WF (M : Module Dom) : Prop where
   intf_extl_disj : Disjoint M.intf M.extl
   intf_priv_disj : Disjoint M.intf M.priv
   extl_priv_disj : Disjoint M.extl M.priv
-  atoms_pairwise_disj : M.atoms.Pairwise fun a b => Disjoint a.write b.write
+  atoms_pairwise_disj : M.atoms.Pairwise (Disjoint on Atom.write)
 
   -- the atoms write exactly the controlled (interface and private) variables
   atoms_cov_ctrl : ∀ x ∈ M.ctrl, ∃ A ∈ M.atoms, x ∈ A.write
@@ -215,6 +209,7 @@ theorem Module.WF.compose {M₁ M₂ : Module Dom} (h₁ : M₁.WF) (h₂ : M₂
   · grind
   · rw [List.pairwise_append]
     refine ⟨pw₁, pw₂, fun a ha b hb => ?_⟩
+    simp only [Function.onFun, Finset.disjoint_left]
     have := wc₁ a ha
     have := wc₂ b hb
     grind

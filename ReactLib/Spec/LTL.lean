@@ -76,43 +76,19 @@ def sem {State: Type u} (F: @LTLFormula State) (trace: Cslib.ωSequence State) :
   | Not F' => ¬ (F'.sem trace)
 
 /-- shallow embedding and the initial semantics of LTLFormulas are the same -/
-theorem shallow_sem: ∀ F: (@LTLFormula State), F.toShallow = F.sem := by
-  intro F
-  induction F
-  case AP => rfl
-  case Next =>
-    simp [toShallow, sem]
-    unfold Shallow.Next
-    simp_all
-  case Until =>
-    simp [toShallow, sem]
-    unfold Shallow.Until
-    simp_all
-  case Or =>
-    simp [toShallow, sem]
-    unfold Shallow.Or
-    simp_all
-  case And =>
-    simp [toShallow, sem]
-    unfold Shallow.And
-    simp_all
-  case Not =>
-    simp [toShallow, sem]
-    unfold Shallow.Not
-    simp_all
+theorem shallow_sem: ∀ φ: (@LTLFormula State), φ.toShallow = φ.sem := by
+  intro φ
+  induction φ <;> funext tr <;>
+    simp_all [toShallow, sem, Shallow.AP, Shallow.Next, Shallow.Until, Shallow.Or,
+      Shallow.And, Shallow.Not]
 
 lemma drop_get_zero (ss: Cslib.ωSequence α)
-  : ∀ n: Nat, ss.get n = (ss.drop n).get 0 := by
-    intro n
-    simp [Cslib.ωSequence.drop]
-    rfl
+  : ∀ n: Nat, ss.get n = (ss.drop n).get 0 :=
+  fun n => (Cslib.ωSequence.get_drop 0 n ss).symm
 
 lemma drop_get_n (ss: Cslib.ωSequence α)
-  : ∀ n x: Nat, ss.get (n + x) = (ss.drop n).get x := by
-    intro n x
-    simp_all [Cslib.ωSequence.drop]
-    rw [Nat.add_comm]
-    rfl
+  : ∀ n x: Nat, ss.get (n + x) = (ss.drop n).get x :=
+  fun n x => (Cslib.ωSequence.get_drop x n ss).symm
 
 -- lemma semₙ_tail: ∀ F: (@LTLFormula State), F.semₙ tr.tail n ↔ F.semₙ tr (n + 1) := by
 --   intro F
@@ -156,34 +132,16 @@ lemma drop_get_n (ss: Cslib.ωSequence α)
 --         exact ha (j + 1) this (by omega)
 
 theorem sem_semₙ_suffixes:
-∀ F: (@LTLFormula State), F.sem (tr.drop n) ↔ F.semₙ tr n := by
-  intro F
-  induction F generalizing tr n
-  case AP a =>
-    simp_all [sem, semₙ]
-    simp [drop_get_zero]
-  case Or => simp_all [sem, semₙ]
-  case And => simp_all [sem, semₙ]
-  case Not => simp_all [sem, semₙ]
-  case Next a ih =>
-    simp_all [sem, semₙ]
-  case Until a ah ah2 =>
-    simp_all [sem, semₙ]
-    constructor
-    . rintro ⟨m, hb, ha⟩
-      refine ⟨n + m, by omega, ?_, fun j hj1 hj2 => ?_⟩
-      · exact hb
-      · have := ha (j - n) (by omega)
-        rw [show n + (j - n) = j from by omega] at this
-        exact this
-    · rintro ⟨m, hm, hb, ha⟩
-      refine ⟨m - n, ?_, fun j hj => ?_⟩
-      ·
-        rw [show n + (m - n) = m from by omega]
-        exact hb
-      ·
-        rw [show n + j = n + j from rfl]
-        exact ha (n + j) (by omega) (by omega)
+∀ φ: (@LTLFormula State), φ.sem (tr.drop n) ↔ φ.semₙ tr n := by
+  intro φ
+  induction φ generalizing tr n with
+  | Until a b iha ihb =>
+    simp only [sem, semₙ, Cslib.ωSequence.drop_drop, iha, ihb]
+    exact ⟨fun ⟨m, hb, ha⟩ => ⟨n + m, by omega, hb, fun j hj => by
+        have := ha (j - n) (by omega); rwa [show n + (j - n) = j by omega] at this⟩,
+      fun ⟨m, hm, hb, ha⟩ => ⟨m - n, by rwa [show n + (m - n) = m by omega],
+        fun j hj => ha _ (by omega)⟩⟩
+  | _ => simp_all [sem, semₙ, ← drop_get_zero]
 
 
 /-- The relation of initial and arbitrary-point semantics of LTL -/
@@ -220,29 +178,7 @@ end Notation
 
 theorem Globally.explicit (ψ: @LTLFormula State) (tr: Cslib.ωSequence State):
   ((Globally ψ).sem tr) ↔ (∀ i, ψ.sem (tr.drop i)) := by
-  constructor
-  case mp =>
-    unfold Globally
-    rw [sem]
-    rw [Finally]
-    rw [sem]
-    simp_all
-    intro h x
-    have hh := h x
-    rw [sem] at hh
-    simp [sem] at hh
-    exact hh
-  case mpr =>
-    unfold Globally
-    rw [sem]
-    rw [Finally]
-    rw [sem]
-    simp_all
-    intro h x hs
-    simp [sem]
-    rw [sem] at hs
-    have A := h x
-    contradiction
+  simp [sem]
 
 theorem Finally.explicit (ψ: @LTLFormula State) (tr: Cslib.ωSequence State):
   ((Finally ψ).sem tr) ↔ (∃ i, ψ.sem (tr.drop i)) := by

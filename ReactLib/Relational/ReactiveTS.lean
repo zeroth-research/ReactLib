@@ -40,20 +40,8 @@ def traces'
     (ss (i + 1)) = module.update (ss i) (inps (i + 1))
 
 theorem traces'_impl_traces (module: ReactiveTS Extl State):
-  module.traces' ss inps → module.traces ss := by
-  unfold traces traces'
-  simp_all
-  intro h hs hi
-  constructor
-  . refine ⟨ inps.head, ?_⟩
-    constructor
-    . exact h
-    . have : inps 0 = inps.head := by
-        unfold Cslib.ωSequence.head
-        rfl
-      rw [this]
-  . intro i
-    exact ⟨inps (i + 1), (hi i).1, rfl⟩
+  module.traces' ss inps → module.traces ss :=
+  fun ⟨h0, h⟩ => ⟨⟨_, h0⟩, fun i => ⟨_, h i⟩⟩
 
 
 def TS_init (M: ReactiveTS Extl State)
@@ -71,38 +59,14 @@ def toTS (module: ReactiveTS Extl State): TS State Extl :=
 /-- Every ω-trace of the TS of a `ReactiveTS` is a trace of the
     `ReactiveTS`; the converse is `traces_to_TS`. -/
 theorem TS_traces (M: ReactiveTS Extl State):
-  ∀ ss μs, M.toTS.ωTrace ss μs → M.traces ss := by
-  intro ss μs h
-  unfold traces
-  simp_all [toTS, TS.ωTrace, Cslib.LTS.OmegaExecution]
-  constructor
-  case left =>
-    have hi := h.left
-    simp [TS_init] at hi
-    have : ss 0 = ss.get 0 := by rfl
-    simp [this, Eq.comm]
-    exact hi
-  case right =>
-    intro i
-    have hi := h.right i
-    simp [TS_update] at hi
-    refine ⟨ (μs i), ?_⟩
-    rw [Eq.comm]
-    exact hi
+  ∀ ss μs, M.toTS.ωTrace ss μs → M.traces ss :=
+  fun _ μs ⟨⟨l, hl, e⟩, h⟩ => ⟨⟨l, hl, e.symm⟩, fun i => ⟨μs i, (h i).1, (h i).2.symm⟩⟩
 
 theorem traces_to_TS (M: ReactiveTS Extl State):
   ∀ ss, M.traces ss → (∃ μs, M.toTS.ωTrace ss μs) := by
-  intro ss
-  simp [traces]
-  have : ss 0 = ss.get 0 := rfl
-  simp_all [toTS, Cslib.LTS.OmegaExecution, TS_init, TS_update, TS.ωTrace]
-  intro x hx hs hi
-  constructor
-  . refine ⟨ x, ?_⟩
-    exact ⟨ hx, rfl ⟩
-  . exact ⟨fun i => (hi i).choose, fun i =>
-    let ⟨hpre, hupd⟩ := (hi i).choose_spec
-    ⟨hpre, hupd.symm⟩⟩
+  intro ss ⟨⟨l, hl, e⟩, h⟩
+  choose μ hμ using h
+  exact ⟨⟨μ⟩, ⟨l, hl, e.symm⟩, fun i => ⟨(hμ i).1, (hμ i).2.symm⟩⟩
 
 
 /- composition of two `ReactiveTS`s over the same inputs and states:

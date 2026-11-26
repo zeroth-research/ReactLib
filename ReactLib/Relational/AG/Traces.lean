@@ -138,8 +138,6 @@ theorem Module.WF.writer_unique {M : Module Dom} (hM : M.WF) {A B : Atom Dom}
     (hA : A ∈ M.atoms) (hB : B ∈ M.atoms) {x : Name} (hxA : x ∈ A.write)
     (hxB : x ∈ B.write) : A = B := by
   by_contra hne
-  have : Std.Symm (fun a b : Atom Dom => Disjoint a.write b.write) :=
-    ⟨fun _ _ h => Disjoint.symm h⟩
   exact Finset.disjoint_left.mp (hM.atoms_pairwise_disj.forall hA hB hne) hxA hxB
 
 /-- A round of an atom of `M` depends only on the variables of `M`. -/

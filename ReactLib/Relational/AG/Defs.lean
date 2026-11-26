@@ -32,12 +32,8 @@ structure Module.Implements (P Q : Module Dom) : Prop where
   traces : ∀ n ts, P.FinTrace n ts → Q.FinTrace n ts
 
 theorem Module.Implements.obs_subset {P Q : Module Dom} (h : P.Implements Q) :
-    Q.obs ⊆ P.obs := by
-  intro x hx
-  simp only [Module.obs, Finset.mem_union] at hx
-  rcases hx with hx | hx
-  · exact Finset.mem_union_left _ (h.intf hx)
-  · exact h.extl hx
+    Q.obs ⊆ P.obs :=
+  Finset.union_subset (h.intf.trans Finset.subset_union_left) h.extl
 
 theorem Module.Implements.refl (P : Module Dom) : P.Implements P where
   intf := subset_rfl

@@ -222,13 +222,7 @@ theorem Matrix_1_1_eq (f : Matrix (Fin 1) (Fin 1) t) : f = Matrix.mk fun _ _ => 
 
 @[simp] theorem Matrix_1_1_eq_iff {t : Type} (a b : Matrix (Fin 1) (Fin 1) t) :
     (a = b) ↔ (a 0 0 = b 0 0) := by
-  constructor
-  · intro h; rw [h]
-  · intro h
-    ext i j
-    have hi : i = ⟨0, by simp⟩ := Fin.fin_one_eq_zero i
-    have hj : j = ⟨0, by simp⟩ := Fin.fin_one_eq_zero j
-    rw [hi, hj]; exact h
+  simp only [← Matrix.ext_iff, Fin.forall_fin_one]
 
 /- theorem ite_Matrix_1_1 (p : Prop) [Decidable p] (a b : Matrix (Fin 1) (Fin 1) t) : -/
 /-       (if p then a else b) = fun _ _ => if p then a 0 0 else b 0 0 := by -/

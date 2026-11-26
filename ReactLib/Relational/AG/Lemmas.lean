@@ -1,5 +1,7 @@
 import Relational.AG.Defs
 import Mathlib.Data.Fintype.Card
+import Mathlib.Data.List.Sort
+import Mathlib.Order.Extension.Linear
 import Mathlib.Data.Set.Finite.Basic
 
 /-!
@@ -44,48 +46,39 @@ theorem wf_of_acyclic_of_finite {α : Type*} (r : α → α → Prop) (s : Set �
 
 variable {Name : Type} {Dom : Name → Type u}
 
-/-- A nonempty acyclic list of atoms has an atom that awaits no atom of the list. -/
-theorem Atom.Acyclic.exists_min {As : List (Atom Dom)} (h : Atom.Acyclic As)
-    {A₀ : Atom Dom} (hA₀ : A₀ ∈ As) : ∃ A ∈ As, ∀ B ∈ As, ¬ A.awaits B := by
-  have hwf := wf_of_acyclic_of_finite (fun a b => a ∈ As ∧ b ∈ As ∧ a.awaits b)
-    {a | a ∈ As} (List.finite_toSet As) (fun a b h => h.1)
-    (fun a hc => by
-      have ha : a ∈ As := by
-        obtain ⟨b, hab, -⟩ := Relation.TransGen.head'_iff.mp hc
-        exact hab.1
-      exact h a ha hc)
-  obtain ⟨A, hA, hmin⟩ := hwf.has_min {a | a ∈ As} ⟨A₀, hA₀⟩
-  exact ⟨A, hA, fun B hB hAB => hmin B hB ⟨hA, hB, hAB⟩⟩
-
 /-- Topological order: the atoms can be listed so that no atom awaits a later one
-    (or itself). -/
-theorem Atom.Acyclic.exists_sorted : ∀ {As : List (Atom Dom)}, Atom.Acyclic As →
+    (or itself). Mathlib has no topological sort of lists: the await order is
+    extended to a linear order (`extend_partialOrder`) and the list sorted by
+    it (`List.insertionSort`). -/
+theorem Atom.Acyclic.exists_sorted {As : List (Atom Dom)} (h : Atom.Acyclic As) :
     ∃ l : List (Atom Dom), l.Perm As ∧ l.Pairwise (fun a b => ¬ a.awaits b) ∧
       ∀ a ∈ l, ¬ a.awaits a := by
-  intro As
-  induction hn : As.length generalizing As with
-  | zero =>
-    intro _
-    have : As = [] := List.length_eq_zero_iff.mp hn
+  classical
+  let E : Atom Dom → Atom Dom → Prop := fun a b => a ∈ As ∧ b ∈ As ∧ a.awaits b
+  have hirr : ∀ a, ¬ Relation.TransGen E a a := fun a hc =>
+    h a (Relation.TransGen.head'_iff.mp hc).choose_spec.1.1 hc
+  -- `b ≤ a` when `a` (transitively) awaits `b`: a partial order; extend it to
+  -- a linear one and sort by it
+  have : IsPartialOrder _ (fun b a => Relation.ReflTransGen E a b) :=
+    { refl := fun _ => .refl
+      trans := fun _ _ _ h₁ h₂ => h₂.trans h₁
+      antisymm := fun a b hab hba => by
+        rcases Relation.reflTransGen_iff_eq_or_transGen.mp hab with rfl | h₁
+        · rfl
+        · rcases Relation.reflTransGen_iff_eq_or_transGen.mp hba with rfl | h₂
+          · rfl
+          · exact absurd (h₁.trans h₂) (hirr _) }
+  obtain ⟨s, hs, hle⟩ := extend_partialOrder (fun b a => Relation.ReflTransGen E a b)
+  have hmem : ∀ a, a ∈ As.insertionSort s ↔ a ∈ As := fun a => (List.perm_insertionSort s As).mem_iff
+  have key : ∀ a ∈ As, ∀ b ∈ As, s a b → ¬ a.awaits b := fun a ha b hb hab hw => by
+    have e : E a b := ⟨ha, hb, hw⟩
+    have := antisymm hab (hle b a (.single e))
     subst this
-    exact ⟨[], .refl _, .nil, by simp⟩
-  | succ n ih =>
-    intro h
-    obtain ⟨A₀, hA₀⟩ : ∃ a, a ∈ As := List.exists_mem_of_length_pos (by omega)
-    obtain ⟨A, hA, hmin⟩ := h.exists_min hA₀
-    obtain ⟨s, t, rfl⟩ := List.append_of_mem hA
-    have hperm : (A :: (s ++ t)).Perm (s ++ A :: t) := List.perm_middle.symm
-    obtain ⟨l, hl, hsorted, hirr⟩ := ih (As := s ++ t) (by simp at hn ⊢; omega)
-      (h.of_subset fun a ha => by simp at ha ⊢; tauto)
-    refine ⟨A :: l, (hl.cons A).trans hperm, ?_, ?_⟩
-    · rw [List.pairwise_cons]
-      refine ⟨fun b hb => hmin b ?_, hsorted⟩
-      have := hl.subset hb
-      simp at this ⊢; tauto
-    · intro a ha
-      rcases List.mem_cons.mp ha with rfl | ha
-      · exact hmin _ hA
-      · exact hirr a ha
+    exact hirr a (.single e)
+  refine ⟨As.insertionSort s, List.perm_insertionSort s As, ?_, ?_⟩
+  · exact (List.pairwise_insertionSort s As).imp_of_mem fun ha hb hab =>
+      key _ ((hmem _).mp ha) _ ((hmem _).mp hb) hab
+  · exact fun a ha => key a ((hmem a).mp ha) a ((hmem a).mp ha) (refl a)
 
 /-- Executing a topologically sorted list of atoms with pairwise disjoint writes,
     for an abstract round predicate `R` (instances: `Atom.Init`, `Atom.Update s`). -/
@@ -137,7 +130,7 @@ theorem Module.WF.exists_round {M : Module Dom} (hM : M.WF)
   have hmem : ∀ A, A ∈ l ↔ A ∈ M.atoms ∧ ¬ K A := fun A => by
     rw [hperm.mem_iff]; simp
   have hdisj : l.Pairwise (fun a b => Disjoint a.write b.write) :=
-    (hperm.pairwise_iff (fun h => Disjoint.symm h)).mpr
+    (hperm.pairwise_iff symm).mpr
       (hM.atoms_pairwise_disj.sublist List.filter_sublist)
   obtain ⟨t', hl, ht'⟩ := Atom.exists_round_sorted R hcongr htotal l hsorted hdisj t
   have hkeep : ∀ A ∈ M.atoms, K A → ∀ x ∈ A.write, t' x = t x := by
@@ -145,8 +138,6 @@ theorem Module.WF.exists_round {M : Module Dom} (hM : M.WF)
     refine ht' x fun C hC hxC => ?_
     have hCm := (hmem C).mp hC
     have hne : A ≠ C := fun h => hCm.2 (h ▸ hKA)
-    have : Std.Symm (fun a b : Atom Dom => Disjoint a.write b.write) :=
-      ⟨fun _ _ h => Disjoint.symm h⟩
     exact Finset.disjoint_left.mp (hM.atoms_pairwise_disj.forall hA hCm.1 hne) hx hxC
   refine ⟨t', fun A hA => ?_, fun x hx => ?_, hkeep⟩
   · by_cases hKA : K A
@@ -213,14 +204,7 @@ theorem Module.WF.exists_initRound {M : Module Dom} (hM : M.WF) (e : State Dom) 
 omit [DecidableEq Name] in
 theorem Atom.dependsOn_append {As Bs : List (Atom Dom)} {x y : Name} :
     Atom.dependsOn (As ++ Bs) x y ↔ Atom.dependsOn As x y ∨ Atom.dependsOn Bs x y := by
-  simp only [Atom.dependsOn, List.mem_append]
-  constructor
-  · rintro ⟨A, hA | hA, h⟩
-    · exact .inl ⟨A, hA, h⟩
-    · exact .inr ⟨A, hA, h⟩
-  · rintro (⟨A, hA, h⟩ | ⟨A, hA, h⟩)
-    · exact ⟨A, .inl hA, h⟩
-    · exact ⟨A, .inr hA, h⟩
+  simp [Atom.dependsOn, or_and_right, exists_or]
 
 theorem Module.WF.dependsOn_ctrl {M : Module Dom} (h : M.WF) {x y : Name}
     (hd : Atom.dependsOn M.atoms x y) : x ∈ M.ctrl ∧ y ∈ M.vars := by

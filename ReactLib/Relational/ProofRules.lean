@@ -35,6 +35,38 @@ theorem rule_globally {State: Type u} {Label : Type v}
   exact lts.trace_states_in_invariant S hinv htr x
 
 
+/-- `rule_buchi` with the hypothesis on the ranking function curried. -/
+theorem rule_buchi' {State: Type u} {Label : Type v}
+    (lts : TS State Label)                    -- the TS
+    (B : State → Prop)                        -- proposition `B`
+    (I : StateSet State)                      -- invariant `I`
+    (hinv : lts.StateSet_isInvariant I)
+    (V : State → Nat)                         -- ranking function on
+                                              -- (I ∧ ¬B)-states
+    -- assume `V` is a function such that whenever `B` does not hold,
+    -- then in next steps the value of `V` decreases
+    (hrank : ∀ s s', I s → ¬(B s) → (∃ l, lts.Tr s l s') → V s' < V s) :
+    -- Then then `B` holds infinitely many times
+    ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
+  intro ss μs htr
+  have hI := lts.trace_states_in_invariant I hinv htr
+  rw [Globally.explicit]
+  intro i
+  rw [Finally.explicit]
+  by_contra! h
+  simp only [sem, ← drop_get_zero] at h
+  -- staying in `¬B` from `i` on, `V` would decrease forever
+  have hdec : ∀ k, V (ss.get (i + k)) + k ≤ V (ss.get i) := by
+    intro k
+    induction k with
+    | zero => simp
+    | succ k ih =>
+      have : V (ss.get (i + k + 1)) < V (ss.get (i + k)) :=
+        hrank _ _ (hI (i + k)) (drop_get_n ss i k ▸ h k) ⟨μs.get (i + k), htr.2 (i + k)⟩
+      show V (ss.get (i + k + 1)) + (k + 1) ≤ _; omega
+  have := hdec (V (ss.get i) + 1)
+  omega
+
 /-- Proof rule saying that if we have a ranking function
     on `¬B` states (states where `B` does not hold),
     then every trace in the transition system visits
@@ -54,7 +86,7 @@ theorem rule_globally {State: Type u} {Label : Type v}
 -/
 theorem rule_buchi {State: Type u} {Label : Type v}
     (lts : TS State Label)                    -- the TS
-    (B : State → Prop) [DecidablePred B]      -- proposition `B`
+    (B : State → Prop)                        -- proposition `B`
     (I : StateSet State)                      -- invariant `I`
     (hinv : lts.StateSet_isInvariant I)
     (V : State → Nat)                         -- ranking function on
@@ -63,38 +95,8 @@ theorem rule_buchi {State: Type u} {Label : Type v}
     -- then in next steps the value of `V` decreases
     (hrank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s') → V s' < V s) :
     -- Then then `B` holds infinitely many times
-    ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
-  intro ss μs htr
-  simp [LTLFormula.sem]
-  simp [<- drop_get_zero]
-  have hI := lts.trace_states_in_invariant I hinv htr
-  have hstep : ∀ j, ∃ l, lts.Tr (ss.get j) l (ss.get (j + 1)) := by
-    intro j; exists μs.get j; exact htr.2 j
-  intro i
-  suffices ∀ k n, V (ss.get n) ≤ k → ∃ x, B (ss.get (n + x)) from
-    this (V (ss.get i)) i (Nat.le_refl _)
-  intro k
-  induction k with
-  | zero =>
-    intro n hv
-    exists 0
-    simp
-    if hb : B (ss.get n) then
-      exact hb
-    else
-      have : V (ss.get n) ≤ V (ss.get (n + 1)) := by simp_all
-      exact absurd (hrank _ _ ⟨ (hI n), hb, (hstep n)⟩) (Nat.not_lt.mpr this)
-  | succ k ih =>
-    intro n hv
-    if hb : B (ss.get n) then
-      exact ⟨0, by simp; exact hb⟩
-    else
-      have hdec := hrank _ _ ⟨ hI n, hb, (hstep n)⟩
-      obtain ⟨x, hbx⟩ := ih (n + 1) (by omega)
-      exists x + 1
-      have : n + (x + 1) = n + 1 + x := by omega
-      rw [this]
-      exact hbx
+    ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) :=
+  rule_buchi' lts B I hinv V fun s s' a b c => hrank s s' ⟨a, b, c⟩
 
 
 /-- Every run of `A` is a run of `B`, so a `G`-property of `B` is one of `A`.
@@ -126,56 +128,11 @@ theorem TS.transfer {S : Type u} {T : Type u} {L : Type v} {L' : Type v}
   exact h x
 
 
-/-- `rule_buchi` with the hypothesis on the ranking function curried. -/
-theorem rule_buchi' {State: Type u} {Label : Type v}
-    (lts : TS State Label)                    -- the TS
-    (B : State → Prop) [DecidablePred B]      -- proposition `B`
-    (I : StateSet State)                      -- invariant `I`
-    (hinv : lts.StateSet_isInvariant I)
-    (V : State → Nat)                         -- ranking function on
-                                              -- (I ∧ ¬B)-states
-    -- assume `V` is a function such that whenever `B` does not hold,
-    -- then in next steps the value of `V` decreases
-    (hrank : ∀ s s', I s → ¬(B s) → (∃ l, lts.Tr s l s') → V s' < V s) :
-    -- Then then `B` holds infinitely many times
-    ∀ ss μs, lts.ωTrace ss μs → ss ⊧ G (F (AP B)) := by
-  intro ss μs htr
-  simp [LTLFormula.sem]
-  simp [<- drop_get_zero]
-  have hI := lts.trace_states_in_invariant I hinv htr
-  have hstep : ∀ j, ∃ l, lts.Tr (ss.get j) l (ss.get (j + 1)) := by
-    intro j; exists μs.get j; exact htr.2 j
-  intro i
-  suffices ∀ k n, V (ss.get n) ≤ k → ∃ x, B (ss.get (n + x)) from
-    this (V (ss.get i)) i (Nat.le_refl _)
-  intro k
-  induction k with
-  | zero =>
-    intro n hv
-    exists 0
-    simp
-    if hb : B (ss.get n) then
-      exact hb
-    else
-      have : V (ss.get n) ≤ V (ss.get (n + 1)) := by simp_all
-      exact absurd (hrank _ _ (hI n) hb (hstep n)) (Nat.not_lt.mpr this)
-  | succ k ih =>
-    intro n hv
-    if hb : B (ss.get n) then
-      exact ⟨0, by simp; exact hb⟩
-    else
-      have hdec := hrank _ _ (hI n) hb (hstep n)
-      obtain ⟨x, hbx⟩ := ih (n + 1) (by omega)
-      exists x + 1
-      have : n + (x + 1) = n + 1 + x := by omega
-      rw [this]
-      exact hbx
-
 theorem rule_buchi_mat_nat
     {State: Type u} {Label : Type v}
     ----------
     (lts : TS State Label)                    -- the TS
-    (B : State → Prop) [DecidablePred B]      -- proposition `B`
+    (B : State → Prop)                        -- proposition `B`
     (I : StateSet State)                      -- invariant `I`
     (hinv : lts.StateSet_isInvariant I)
     (V : State → (Matrix (Fin v₁) (Fin v₂) Nat))             -- ranking function on
@@ -200,7 +157,7 @@ theorem rule_buchi_mat_int
     {State: Type u} {Label : Type v}
     ----------
     (lts : TS State Label)                    -- the TS
-    (B : State → Prop) [DecidablePred B]      -- proposition `B`
+    (B : State → Prop)                        -- proposition `B`
     (I : StateSet State)                      -- invariant `I`
     (hinv : lts.StateSet_isInvariant I)
     (V : State → (Matrix (Fin v₁) (Fin v₂) Int))             -- ranking function on

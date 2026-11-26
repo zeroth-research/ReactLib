@@ -107,14 +107,9 @@ theorem Val.finite_image_of_coord {α : Type*} {X : Finset Name} (S : Set α)
     (f : α → Val Dom X)
     (h : ∀ x (hx : x ∈ X), ((fun a => f a x hx) '' S).Finite) : (f '' S).Finite := by
   let G : Val Dom X → (∀ x : X, Dom x.1) := fun v x => v x.1 x.2
-  have hG : Function.Injective G := fun v w hvw => by
-    funext x hx
-    exact congrFun hvw ⟨x, hx⟩
-  have hpi : (Set.pi Set.univ fun x : X => (fun a => f a x.1 x.2) '' S).Finite :=
-    Set.Finite.pi fun x => h x.1 x.2
-  refine (hpi.preimage hG.injOn).subset ?_
-  rintro _ ⟨a, ha, rfl⟩ x -
-  exact ⟨a, ha, rfl⟩
+  have hG : Function.Injective G := fun v w hvw => funext₂ fun x hx => congrFun hvw ⟨x, hx⟩
+  refine .of_finite_image (Set.forall_finite_image_eval_iff.mp fun x => ?_) hG.injOn
+  simpa [Set.image_image, G] using h x.1 x.2
 
 variable [DecidableEq Name]
 
@@ -412,12 +407,8 @@ theorem Module.Implements.of_trace {P Q : Module Dom} (hP : P.WF)
   intf := intf
   extl := extl
   awaits := awaits
-  traces := Module.finTraces_of_traces hP (by
-    intro x hx
-    simp only [Module.obs, Finset.mem_union] at hx
-    rcases hx with hx | hx
-    · exact Finset.mem_union_left _ (intf hx)
-    · exact extl hx) h
+  traces := Module.finTraces_of_traces hP
+    (Finset.union_subset (intf.trans Finset.subset_union_left) extl) h
 
 /-! ### Example: a private counter -/
 

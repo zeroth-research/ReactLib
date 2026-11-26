@@ -10,22 +10,8 @@ import Cslib.Computability.Automata.NA.Basic
  ----------------------------------------------------------------- -/
 universe u v
 
-def StateSet (State: Type u) := State → Prop
-
-instance {State: Type u} : Membership State (StateSet State) where
-  mem S s := S s
-
-instance {State: Type u} : EmptyCollection (StateSet State) where
-  emptyCollection := fun _ => False
-
-instance {State: Type u} : Union (StateSet State) where
-  union A B := fun s => s ∈ A ∨ s ∈ B
-
-instance {State: Type u} : Inter (StateSet State) where
-  inter A B := fun s => s ∈ A ∧ s ∈ B
-
-instance {State: Type u} : HasSubset (StateSet State) where
-  Subset A B := ∀ s, s ∈ A → s ∈ B
+/-- A set of states. -/
+abbrev StateSet (State: Type u) := Set State
 
 
 
