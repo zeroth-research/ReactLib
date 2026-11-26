@@ -37,35 +37,35 @@ def ωTrace (ts : TS State Label)
   ts.start (ss.get 0) ∧ ts.OmegaExecution ss μs
 
 /- is the state on some ω-trace? States reachable only along finite paths
-   that cannot be extended to an infinite run do not count. -/
-def reachable (lts : TS State Label) (s : State) : Prop :=
-  ∃ ss μs, lts.ωTrace ss μs ∧ ∃ n: Nat, ss.get n = s
+   that cannot be extended to an infinite run do not count.
+   This is fine as reactive modules have only infinite runs. -/
+def reachable (ts : TS State Label) (s : State) : Prop :=
+  ∃ ss μs, ts.ωTrace ss μs ∧ ∃ n: Nat, ss.get n = s
 
 /- the set of states on ω-traces (see `reachable`) -/
-def reachableSet (lts : TS State Label) : StateSet State :=
-  fun s => lts.reachable s
+def reachableSet (ts : TS State Label) : StateSet State :=
+  fun s => ts.reachable s
 
 /- a set of state is inductive (closed under transition relation) -/
-def StateSet_isInductive (lts : TS State Label) (S : StateSet State) : Prop :=
-  ∀ s s' : State, s ∈ S ∧ (∃ l, lts.Tr s l s') → s' ∈ S
+def StateSet_isInductive (ts : TS State Label) (S : StateSet State) : Prop :=
+  ∀ s s' : State, s ∈ S ∧ (∃ l, ts.Tr s l s') → s' ∈ S
 
 /- a set of states is invariant: it contains every state on an ω-trace
-   (`reachableSet`). This is what ω-trace properties need; a system with no
-   infinite run has every set, even `∅`, as an invariant. -/
-def StateSet_isInvariant (lts : TS State Label)
+   (`reachableSet`) -/
+def StateSet_isInvariant (ts : TS State Label)
     (S : StateSet State) : Prop :=
-  lts.reachableSet ⊆ S
+  ts.reachableSet ⊆ S
 
 /- a set of states is inductive and contains initial states -/
-def StateSet_isInductiveInitial (lts : TS State Label)
+def StateSet_isInductiveInitial (ts : TS State Label)
     (S : StateSet State) : Prop :=
-  (∀ s, lts.init s → s ∈ S) ∧ lts.StateSet_isInductive S
+  (∀ s, ts.init s → s ∈ S) ∧ ts.StateSet_isInductive S
 
 /- every inductive initial state is invariant -/
 theorem StateSet_ind_init_is_inv
-    (lts : TS State Label) :
-    ∀ S, lts.StateSet_isInductiveInitial S →
-      lts.StateSet_isInvariant S := by
+    (ts : TS State Label) :
+    ∀ S, ts.StateSet_isInductiveInitial S →
+      ts.StateSet_isInvariant S := by
   intro S ⟨hinit, hind⟩ s hs
   obtain ⟨ss, μs, ⟨hsinit, htr⟩, n, rfl⟩ := hs
   induction n with
@@ -74,9 +74,9 @@ theorem StateSet_ind_init_is_inv
 
 /- every state on an arbitrary trace is contained in arbitrary invariant -/
 lemma trace_states_in_invariant
-    (lts : TS State Label)
-    (S : StateSet State) (hinv : lts.StateSet_isInvariant S)
-    (htr : lts.ωTrace ss μs) :
+    (ts : TS State Label)
+    (S : StateSet State) (hinv : ts.StateSet_isInvariant S)
+    (htr : ts.ωTrace ss μs) :
     ∀ x: Nat, S (ss.get x) := by
   intro x
   apply hinv
