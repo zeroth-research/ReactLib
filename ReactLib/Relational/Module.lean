@@ -135,6 +135,20 @@ theorem Atom.acyclic_iff_nameAcyclic {As : List (Atom Dom)} :
     obtain ⟨z, hz, hdep⟩ := Atom.dependsOn_of_awaits hcyc
     exact h z (hdep z hz)
 
+/-- The atoms have no await cycle when some rank on names is lower for every
+    variable an atom awaits than for every variable it writes: an await chain
+    lowers the rank at every step, so it never comes back. With the atoms
+    given explicitly, the hypothesis is decidable. -/
+theorem Atom.acyclic_of_rank {As : List (Atom Dom)} (rank : Name → Nat)
+    (h : ∀ A ∈ As, ∀ x ∈ A.write, ∀ y ∈ A.await, rank y < rank x) :
+    Atom.Acyclic As := by
+  have lt : ∀ x y, Relation.TransGen (Atom.dependsOn As) x y → rank y < rank x := by
+    intro x y hxy
+    induction hxy with
+    | single hd => obtain ⟨A, hA, hx, hy⟩ := hd; exact h A hA _ hx _ hy
+    | tail _ hd ih => obtain ⟨A, hA, hx, hy⟩ := hd; exact lt_trans (h A hA _ hx _ hy) ih
+  exact Atom.acyclic_iff_nameAcyclic.mpr fun x hx => lt_irrefl _ (lt x x hx)
+
 /-! ### Modules -/
 
 variable [DecidableEq Name]

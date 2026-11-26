@@ -1,5 +1,6 @@
 import Relational.Basic
 import Relational.Module
+import Relational.ReactiveTS
 import Mathlib.Data.Finset.Pi
 
 /-!
@@ -22,7 +23,7 @@ import Mathlib.Data.Finset.Pi
 
 namespace Relational
 
-universe u
+universe u v
 
 variable {Name : Type} {Dom : Name → Type u}
 
@@ -48,6 +49,22 @@ def Atom.Init (A : Atom Dom) (s : State Dom) : Prop :=
     and the values in `s'` of those it awaits. -/
 def Atom.Update (A : Atom Dom) (s s' : State Dom) : Prop :=
   A.update (s.restrict A.read) (s'.restrict A.await) (s'.restrict A.write)
+
+/-- A deterministic atom initialises `s` when what it writes there is what its
+    function gives on what it awaits. -/
+theorem Atom.ofFun_init {await read write : Finset Name} {init update}
+    {hd : Disjoint await write} (s : State Dom) :
+    (Atom.ofFun await read write init update hd).Init s ↔
+      s.restrict write = init (s.restrict await) :=
+  Iff.rfl
+
+/-- A deterministic atom updates `s` to `s'` when what it writes in `s'` is
+    what its function gives on what it reads in `s` and awaits in `s'`. -/
+theorem Atom.ofFun_update {await read write : Finset Name} {init update}
+    {hd : Disjoint await write} (s s' : State Dom) :
+    (Atom.ofFun await read write init update hd).Update s s' ↔
+      s'.restrict write = update (s.restrict read) (s'.restrict await) :=
+  Iff.rfl
 
 /-- The initial round of `M` gives the state `s`: every atom initialises it. -/
 def Module.InitRound (M : Module Dom) (s : State Dom) : Prop :=
@@ -251,5 +268,22 @@ theorem Module.Equiv.trace_iff {M N : Module Dom} (h : M.Equiv N)
   simp only [Module.Trace, Module.obs, h.1, h.2.1, h.run_iff]
 
 end Equiv
+
+/-! ### Reactive transition systems -/
+
+/-- A run of `M` is a trace of the reactive transition system `R` when `R`
+    computes `M`'s rounds: seen through `st`, an initial round of `M` is
+    `R.init` of the input `l0` reads off the state, and an update round is
+    `R.update` of the input `l` reads off the two states. The inputs along
+    the run have to meet `R`'s preconditions. -/
+theorem Module.Run.reactiveTS_traces {M : Module Dom} {E S : Type v}
+    (R : ReactiveTS E S) (st : State Dom → S) (l0 : State Dom → E)
+    (l : State Dom → State Dom → E)
+    (hinit : ∀ s, M.InitRound s → st s = R.init (l0 s))
+    (hupdate : ∀ s s', M.UpdateRound s s' → st s' = R.update (st s) (l s s'))
+    {ss : Cslib.ωSequence (State Dom)} (h : M.Run ss)
+    (h0 : R.init_pre (l0 (ss 0))) (hi : ∀ i, R.update_pre (l (ss i) (ss (i + 1)))) :
+    R.traces (ss.map st) :=
+  ⟨⟨l0 (ss 0), h0, hinit _ h.1⟩, fun i => ⟨l (ss i) (ss (i + 1)), hi i, hupdate _ _ (h.2 i)⟩⟩
 
 end Relational
