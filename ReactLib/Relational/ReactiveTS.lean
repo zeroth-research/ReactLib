@@ -34,7 +34,7 @@ def traces'
   (module.init_pre inps.head ∧          -- initial inputs satisfy precondition
    ss 0 = module.init (inps 0)) ∧       -- initial state is defined by `init`
   ∀ i: Nat,
-    module.update_pre (inps i) ∧
+    module.update_pre (inps (i + 1)) ∧
     -- don't forget that inputs are shifted by 1, because the first inputs
     -- are used for initial states
     (ss (i + 1)) = module.update (ss i) (inps (i + 1))
@@ -53,7 +53,7 @@ theorem traces'_impl_traces (module: ReactiveTS Extl State):
         rfl
       rw [this]
   . intro i
-    exact ⟨inps (i + 1), (hi (i + 1)).1, rfl⟩
+    exact ⟨inps (i + 1), (hi i).1, rfl⟩
 
 
 def TS_init (M: ReactiveTS Extl State)
@@ -133,7 +133,7 @@ theorem traces'_compose (A B : ReactiveTS Extl State)
   have tr : ∀ M : ReactiveTS Extl State, M.traces' ss inps →
       M.toTS.ωTrace ss (fun i => inps (i + 1)) := by
     intro M ⟨⟨hpre, h0⟩, hi⟩
-    refine ⟨⟨inps 0, hpre, h0.symm⟩, fun i => ⟨(hi (i + 1)).1, (hi i).2.symm⟩⟩
+    refine ⟨⟨inps 0, hpre, h0.symm⟩, fun i => ⟨(hi i).1, (hi i).2.symm⟩⟩
   exact ⟨tr A hA, tr B hB⟩
 
 end ReactiveTS
