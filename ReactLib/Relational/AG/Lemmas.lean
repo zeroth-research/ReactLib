@@ -1,5 +1,5 @@
 import Relational.AG.Defs
-import Mathlib.Order.WellFoundedSet
+import Mathlib.Data.Fintype.Card
 import Mathlib.Data.Set.Finite.Basic
 
 /-!
@@ -22,24 +22,25 @@ universe u
 /-! ### Rounds -/
 
 /-- An acyclic relation whose sources lie in a finite set is well-founded
-    (successors are smaller). -/
+    (successors are smaller): on that set its transitive closure is a strict
+    order, so `Finite.wellFounded_of_trans_of_irrefl` applies. -/
 theorem wf_of_acyclic_of_finite {α : Type*} (r : α → α → Prop) (s : Set α) (hs : s.Finite)
     (hdom : ∀ a b, r a b → a ∈ s) (hac : ∀ a, ¬ Relation.TransGen r a a) :
     WellFounded (fun c a => r a c) := by
-  have : IsStrictOrder α (fun c a => Relation.TransGen r a c) :=
-    { irrefl := hac, trans := fun _ _ _ h₁ h₂ => h₂.trans h₁ }
-  have hwf : s.WellFoundedOn (fun c a => Relation.TransGen r a c) := hs.wellFoundedOn
-  have key : ∀ a ∈ s, Acc (fun c a => r a c) a := by
-    intro a ha
-    refine hwf.induction (P := fun a => Acc (fun c a => r a c) a) ha fun a _ ih => ?_
-    refine ⟨_, fun c hc => ?_⟩
-    by_cases hcs : c ∈ s
-    · exact ih c hcs (.single hc)
-    · exact ⟨_, fun d hd => absurd (hdom _ _ hd) hcs⟩
-  refine ⟨fun a => ?_⟩
-  by_cases has : a ∈ s
-  · exact key a has
-  · exact ⟨_, fun d hd => absurd (hdom _ _ hd) has⟩
+  classical
+  -- on the finite set `s`, the transitive closure is a strict order
+  have : Finite s := hs.to_subtype
+  let R : s → s → Prop := fun c a => Relation.TransGen r a c
+  have : IsTrans s R := ⟨fun _ _ _ h₁ h₂ => h₂.trans h₁⟩
+  have : Std.Irrefl R := ⟨fun a => hac a⟩
+  -- outside `s` there are no successors
+  have out : ∀ a ∉ s, Acc (fun c a => r a c) a := fun a ha =>
+    ⟨_, fun _ hd => absurd (hdom _ _ hd) ha⟩
+  have key : ∀ a : s, Acc (fun c a => r a c) a := fun a => by
+    induction a using (Finite.wellFounded_of_trans_of_irrefl R).induction with
+    | _ a ih => exact ⟨_, fun c hc =>
+        if hcs : c ∈ s then ih ⟨c, hcs⟩ (.single hc) else out c hcs⟩
+  exact ⟨fun a => if has : a ∈ s then key ⟨a, has⟩ else out a has⟩
 
 variable {Name : Type} {Dom : Name → Type u}
 
