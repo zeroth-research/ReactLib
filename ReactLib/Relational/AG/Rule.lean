@@ -1,4 +1,5 @@
 import Relational.AG.Lemmas
+import Relational.AG.Safety
 
 /-!
   Alur and Henzinger's assume-guarantee rule for reactive modules
@@ -15,7 +16,8 @@ import Relational.AG.Lemmas
   four `Composable` hypotheses give every disjointness the proof uses.
 
   Clauses (1)–(3) of `Module.assume_guarantee` are proved; trace inclusion
-  (clause (4)) and `Module.assume_guarantee_trace` are `sorry`.
+  (clause (4)) is `sorry`. `Module.assume_guarantee_trace` follows from it by
+  König's lemma (`Module.trace_of_finTraces`, `Relational.AG.Safety`).
 -/
 
 namespace Relational
@@ -52,7 +54,9 @@ theorem Module.assume_guarantee_trace {P₁ P₂ Q₁ Q₂ : Module Dom}
     (hextl : (Q₁.compose Q₂).extl ⊆ (P₁.compose P₂).obs)
     (h₁ : (P₁.compose Q₂).Implements Q₁) (h₂ : (Q₁.compose P₂).Implements Q₂)
     (hfin : ∀ x ∈ Q₁.priv ∪ Q₂.priv, Finite (Dom x)) :
-    ∀ ts, (P₁.compose P₂).Trace ts → (Q₁.compose Q₂).Trace ts := by
-  sorry
+    ∀ ts, (P₁.compose P₂).Trace ts → (Q₁.compose Q₂).Trace ts :=
+  fun _ h => Module.trace_of_finTraces (wQ₁.compose wQ₂ hQ) hfin fun n =>
+    (Module.assume_guarantee wP₁ wP₂ wQ₁ wQ₂ hP hQ hP₁Q₂ hQ₁P₂ hextl h₁ h₂).traces n _
+      (h.finTrace n)
 
 end Relational
