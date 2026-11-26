@@ -7,10 +7,10 @@ defaultTargets = ["Spec", "Relational", "Common"]
 [[lean_lib]]
 name = "Spec"
 
-# Matrices (`Relational.Mat`), the box combinators over them
-# (`Relational.Circ`), transition systems (`Relational.Basic`), reactive
-# modules with their transition-system semantics (`Relational.Module`) and
-# proof rules stated in `Spec`'s LTL (`Relational.ProofRules`).
+# Matrices (`Relational.Mat`), transition systems (`Relational.Basic`),
+# reactive modules with their transition-system semantics
+# (`Relational.Module`) and proof rules stated in `Spec`'s LTL
+# (`Relational.ProofRules`).
 [[lean_lib]]
 name = "Relational"
 

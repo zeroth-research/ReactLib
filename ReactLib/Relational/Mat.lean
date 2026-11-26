@@ -21,8 +21,7 @@ import Mathlib.Data.Matrix.Mul
 
   A matrix of `m` rows and `n` columns is Mathlib's
   `Matrix (Fin m) (Fin n) t`; its `+`, `-`, `0`, `*` (the matrix product)
-  and `Matrix.transpose` are Mathlib's. The `Box` combinators over matrices
-  live in `Relational.Circ`.
+  and `Matrix.transpose` are Mathlib's.
 -/
 
 /-- The matrix whose entry `(i, j)` is `f i j`: `Matrix.mk fun i j => …`.
@@ -257,8 +256,8 @@ theorem Matrix_1_1_eq (f : Matrix (Fin 1) (Fin 1) t) : f = Matrix.mk fun _ _ => 
 
 /-! ### Scalar collapse lemmas for zeroth_hammer -/
 
-/-- An `if` between matrices, read at an entry. `ite_fun_apply` does this
-    for functions, and to `simp` a `Matrix` is not one.
+/-- An `if` between matrices, read at an entry. To `simp` a `Matrix` is not
+    a function, so no lemma about an `if` between functions applies.
 
     A pre-lemma (`↓`), so `simp` splits the `if` before it simplifies the
     condition. The other way round, the condition is rewritten while a
