@@ -22,12 +22,15 @@ structure Atom where
   read: List Name
   write: List Name
 
+  -- the initial values of `write` from the new values of `await`
   init: (Val (Dom := Dom) await) -> (Val (Dom := Dom) write)
-  update: (Val (Dom := Dom) (read ++ await)) -> (Val (Dom := Dom) write)
+  -- the new values of `write` from the old values of `read` and the new
+  -- values of `await`. The two valuations are separate, so a name may be
+  -- both read and awaited, and an atom may read the variables it writes.
+  update: (Val (Dom := Dom) read) -> (Val (Dom := Dom) await) -> (Val (Dom := Dom) write)
 
-  await_write_disj: await ∩ write = ∅ 
-  read_write_disj: read ∩ write = ∅ 
-  await_read_disj: await ∩ read = ∅ 
+  -- an atom does not await the new value of a variable it writes
+  await_write_disj: await ∩ write = ∅
 /-- `a` awaits `b`: `a` reads, in the same round, a variable that `b` writes. -/
 def Atom.awaits (a b : Atom (Name := Name) (Dom := Dom)) : Prop :=
   ∃ x ∈ a.await, x ∈ b.write
@@ -66,8 +69,9 @@ structure Module where
   extl_priv_disj: extl ∩  priv = ∅
   atoms_pairwise_disj: atoms.Pairwise fun a b => a.write ∩ b.write = ∅
 
-  atoms_cov_intf: ∀ n ∈ intf, ∃ A ∈ atoms, n ∈ A.write
-  intf_cov_atoms: ∀ A ∈ atoms, A.write ⊆ intf
+  -- the atoms write exactly the controlled (interface and private) variables
+  atoms_cov_ctrl: ∀ n ∈ intf ++ priv, ∃ A ∈ atoms, n ∈ A.write
+  atoms_write_ctrl: ∀ A ∈ atoms, A.write ⊆ intf ++ priv
   atoms_read_mod: ∀ A ∈ atoms, A.read ⊆ extl ∪ priv ∪ intf
   atoms_await_mod: ∀ A ∈ atoms, A.await ⊆ extl ∪ priv ∪ intf
 
@@ -116,8 +120,8 @@ def Module.compose (M₁ M₂ : Module (Name := Name) (Dom := Dom)) (hcomp: M₁
   atoms_pairwise_disj := by
     have p₁ := M₁.atoms_pairwise_disj
     have p₂ := M₂.atoms_pairwise_disj
-    have w₁ := M₁.intf_cov_atoms
-    have w₂ := M₂.intf_cov_atoms
+    have w₁ := M₁.atoms_write_ctrl
+    have w₂ := M₂.atoms_write_ctrl
     simp only [Module.composable] at hc
     rw [List.pairwise_append]
     refine ⟨p₁, p₂, fun a ha b hb => ?_⟩
@@ -125,20 +129,26 @@ def Module.compose (M₁ M₂ : Module (Name := Name) (Dom := Dom)) (hcomp: M₁
     have wb := w₂ b hb
     simp [List.eq_nil_iff_forall_not_mem, List.subset_def] at *
     grind
-  atoms_cov_intf := by
+  atoms_cov_ctrl := by
     intro n hn
-    simp only [List.mem_append] at hn ⊢
-    rcases hn with hn | hn
-    · obtain ⟨A, hA, hw⟩ := M₁.atoms_cov_intf n hn
-      exact ⟨A, Or.inl hA, hw⟩
-    · obtain ⟨A, hA, hw⟩ := M₂.atoms_cov_intf n hn
-      exact ⟨A, Or.inr hA, hw⟩
-  intf_cov_atoms := by
-    intro A hA
-    simp only [List.mem_append] at hA
+    have h₁ : n ∈ M₁.intf ++ M₁.priv → ∃ A ∈ M₁.atoms ++ M₂.atoms, n ∈ A.write :=
+      fun h => let ⟨A, hA, hw⟩ := M₁.atoms_cov_ctrl n h
+        ⟨A, List.mem_append_left _ hA, hw⟩
+    have h₂ : n ∈ M₂.intf ++ M₂.priv → ∃ A ∈ M₁.atoms ++ M₂.atoms, n ∈ A.write :=
+      fun h => let ⟨A, hA, hw⟩ := M₂.atoms_cov_ctrl n h
+        ⟨A, List.mem_append_right _ hA, hw⟩
+    simp only [List.mem_append] at hn h₁ h₂
+    grind
+  atoms_write_ctrl := by
+    intro A hA x hx
+    simp only [List.mem_append] at hA ⊢
     rcases hA with hA | hA
-    · exact List.subset_append_of_subset_left _ (M₁.intf_cov_atoms A hA)
-    · exact List.subset_append_of_subset_right _ (M₂.intf_cov_atoms A hA)
+    · have := M₁.atoms_write_ctrl A hA hx
+      simp only [List.mem_append] at this
+      grind
+    · have := M₂.atoms_write_ctrl A hA hx
+      simp only [List.mem_append] at this
+      grind
   atoms_read_mod := by
     intro A hA x hx
     simp only [List.mem_append] at hA
