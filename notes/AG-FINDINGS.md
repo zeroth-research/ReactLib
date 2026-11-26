@@ -201,19 +201,28 @@ theorem assume_guarantee … (eM₁ eM₂ eN₁ eN₂ : Enabled)
 `Enabled` quantifies over all states and labels; it can later be weakened to
 reachable states.
 
-**Step 4 — bridge from `Relational.Module`.** With the
-state `σ := ∀ x : Name, Dom x` and `Label := Unit`:
+**Step 4 — bridge from `Relational.Module`.** Partly done in
+`Relational/Semantics.lean`: the state is `State Dom := ∀ x, Dom x`,
+`Atom.Init` / `Atom.Update` and `Module.InitRound` / `Module.UpdateRound`
+are the rounds, `Module.toTS : TS (State Dom) Unit` is the transition
+system, `Module.Run` its ω-traces (`run_iff_ωTrace`, by `Iff.rfl`), and
+`Module.Trace` the runs' observable part (interface and external
+variables). Composition: `run_compose` (runs of `M₁ ∥ M₂` are the common
+runs) and `ωTrace_toTS_compose` (the same against `TS.compose`), and
+`Trace.of_compose`. `Module.Equiv` preserves runs and traces. Still to do:
 ```lean
-def Atom.holds (a) (s s' : σ) : Prop := a.update (restrict s a.read) (restrict s' a.await) (restrict s' a.write)  -- a relation now
-def Module.toTS (M) : TS σ Unit    -- Tr s _ s' := ∀ a ∈ M.atoms, a.holds s s'; start similarly with init
-theorem Module.ωTrace_compose : (M₁.compose M₂ h).toTS.ωTrace ss μs ↔ M₁.toTS.ωTrace ss μs ∧ M₂.toTS.ωTrace ss μs
-theorem Module.toTS_owns (hMoore : ∀ a ∈ M.atoms, a.await = []) : M.toTS.Owns (fun s => restrict s (M.intf ++ M.priv))
-theorem Module.toTS_enabled   -- from left-totality of atoms + acyclicity (topological firing order)
+theorem Module.toTS_owns (hMoore : ∀ A ∈ M.atoms, A.await = ∅) :
+    M.toTS.Owns (fun s => s.restrict M.ctrl)
+theorem Module.toTS_enabled (h : M.WF) : M.toTS.Enabled
+  -- from left-totality of atoms + acyclicity (topological firing order)
 ```
-`glue` follows from `composable` (disjoint controlled sets). With these,
-Step 3 gives AG for await-free modules with all variables observed.
-`toTS_enabled` with awaits needs a topological sort of the atoms: medium
-effort (paper: `Relational/Model/FlatTotal.lean`).
+`glue` follows from `Composable` (disjoint controlled sets). With these,
+Step 3 gives AG for await-free modules, with refinement as run inclusion
+(all variables observed). `toTS_enabled` with awaits needs a topological
+sort of the atoms: medium effort (paper: `Relational/Model/FlatTotal.lean`).
+For a step, names outside the atoms' writes can keep their values from the
+old state, so left-totality and acyclicity suffice. For the initial round,
+`Enabled.start` needs some state at all, so also `∀ x, Nonempty (Dom x)`.
 
 **Step 5 — the hard step: awaits, i.e. the real Alur–Henzinger rule.**
 `Owns` fails for an atom that awaits the partner's new values, so the
@@ -241,8 +250,8 @@ domains for the spec's private variables (paper `lem:safety`(2), with a
 counterexample when they are infinite), and Alur–Henzinger's scoping side
 conditions. Defer it: keep private variables observable first.
 
-**Suggested order:** bring in Steps 0–3 as `Relational/AG.lean`; do
-Step 4; then decide whether Step 5 or 6 is worth it.
+**Suggested order:** bring in Steps 0–3 as `Relational/AG.lean`;
+finish Step 4 (`toTS_owns`, `toTS_enabled`); then decide whether Step 5 or 6 is worth it.
 
 ## Paper material to reuse
 
