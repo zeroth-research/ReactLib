@@ -23,7 +23,7 @@ Paths below are relative to `ReactLib/`.
 | 1 | `Module` clashes with Mathlib's `Module` | **fixed**: `namespace Relational` |
 | 2 | Atoms cannot have state | **fixed** |
 | 3 | Private variables are never written | **fixed** |
-| 4 | Atoms are deterministic functions | open |
+| 4 | Atoms are deterministic functions | **fixed**: left-total relations, `Atom.ofFun` |
 | 5 | `ReactiveTS.compose` is intersection, not parallel composition | open |
 | 6 | Implicit `Name`/`Dom`; `compose` takes a proof | open |
 | 7 | Name sets as lists with `∩ = ∅` | open |
@@ -57,14 +57,29 @@ three files shows only headers and imports changed.
    `Module.compose` re-proves both; disjointness of the controlled sets comes
    from `composable`.
 
-4. **Atoms are deterministic functions** (`Relational/Module.lean:26, 30`).
-   Alur–Henzinger atoms are left-total relations. With functions, a
+4. **Fixed — atoms were deterministic functions.** With functions, a
    specification cannot be more nondeterministic than its implementation
-   except through external variables, so refinement and AG are nearly
-   vacuous. Fix: `init : Val await → Val write → Prop`,
-   `update : Val read → Val await → Val write → Prop`, plus left-totality as a
-   separate predicate or field (paper: `AtomicTrans.rel` / `total` in
-   `lean/ReactiveModules/Common/AtomicTransition.lean`).
+   except through external variables, so refinement and AG were nearly
+   vacuous. Atoms are now left-total relations, as in Alur–Henzinger and the
+   paper's `AtomicTrans` (`Relational/Module.lean:25-35`): `init` and
+   `update` are predicates on the written values, and the fields `init_total`
+   and `update_total` say some written values are allowed for *all* inputs,
+   reachable or not. Deterministic atoms (implementations, generated code) are
+   built with `Atom.ofFun`, which is left-total by `rfl`.
+
+   The alternative, deterministic functions plus a nondeterministic choice
+   input, has the same expressive power (any left-total relation is a function
+   of a choice input, by `Classical.choice`) but was rejected. The
+   specification's nondeterminism would sit in choice variables that the
+   implementation lacks, so refinement would be projected trace inclusion from
+   the start (Step 6, hiding), the circular rule would need König's lemma once
+   private state is involved, and composability would need side conditions so
+   that no module drives another's choice inputs. The choice-input view can
+   still come later as a theorem.
+
+   Totality over all inputs is stricter than Alur–Henzinger's "nonblocking",
+   but it is what makes composition non-blocking without reasoning about
+   reachable states. Weaken it only if a real specification needs that.
 
 5. **`ReactiveTS.compose` is intersection, not parallel composition**
    (`Relational/ReactiveTS.lean:111`). Both systems own the whole `State` and
@@ -114,7 +129,7 @@ three files shows only headers and imports changed.
 
 Build on the semantic `TS` layer, over a shared global state, with
 `TS.compose` as intersection. Connect `Relational.Module` later through a
-`Module.toTS`, once it has trace semantics and finding 4 is fixed.
+`Module.toTS`, once it has trace semantics.
 
 Steps 0–3 are fully proved in `notes/AG.lean` (about 280 lines, imports only
 `Relational.Basic`, no `sorry`, axioms `propext`, `Classical.choice`,
@@ -174,10 +189,10 @@ theorem assume_guarantee … (eM₁ eM₂ eN₁ eN₂ : Enabled)
 `Enabled` quantifies over all states and labels; it can later be weakened to
 reachable states.
 
-**Step 4 — bridge from `Relational.Module`** (needs finding 4 first). With the
+**Step 4 — bridge from `Relational.Module`.** With the
 state `σ := ∀ x : Name, Dom x` and `Label := Unit`:
 ```lean
-def Atom.holds (a) (s s' : σ) : Prop := a.update (restrict s a.read) (restrict s' a.await) (restrict s' a.write)
+def Atom.holds (a) (s s' : σ) : Prop := a.update (restrict s a.read) (restrict s' a.await) (restrict s' a.write)  -- a relation now
 def Module.toTS (M) : TS σ Unit    -- Tr s _ s' := ∀ a ∈ M.atoms, a.holds s s'; start similarly with init
 theorem Module.ωTrace_compose : (M₁.compose M₂ h).toTS.ωTrace ss μs ↔ M₁.toTS.ωTrace ss μs ∧ M₂.toTS.ωTrace ss μs
 theorem Module.toTS_owns (hMoore : ∀ a ∈ M.atoms, a.await = []) : M.toTS.Owns (fun s => restrict s (M.intf ++ M.priv))
@@ -214,8 +229,8 @@ domains for the spec's private variables (paper `lem:safety`(2), with a
 counterexample when they are infinite), and Alur–Henzinger's scoping side
 conditions. Defer it: keep private variables observable first.
 
-**Suggested order:** bring in Steps 0–3 as `Relational/AG.lean`; fix
-finding 4 and do Step 4; then decide whether Step 5 or 6 is worth it.
+**Suggested order:** bring in Steps 0–3 as `Relational/AG.lean`; do
+Step 4; then decide whether Step 5 or 6 is worth it.
 
 ## Paper material to reuse
 

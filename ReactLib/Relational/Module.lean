@@ -22,15 +22,36 @@ structure Atom where
   read: List Name
   write: List Name
 
-  -- the initial values of `write` from the new values of `await`
-  init: (Val (Dom := Dom) await) -> (Val (Dom := Dom) write)
-  -- the new values of `write` from the old values of `read` and the new
-  -- values of `await`. The two valuations are separate, so a name may be
-  -- both read and awaited, and an atom may read the variables it writes.
-  update: (Val (Dom := Dom) read) -> (Val (Dom := Dom) await) -> (Val (Dom := Dom) write)
+  -- the initial values of `write` that the new values of `await` allow
+  init: (Val (Dom := Dom) await) -> (Val (Dom := Dom) write) -> Prop
+  -- the new values of `write` that the old values of `read` and the new
+  -- values of `await` allow. The two valuations are separate, so a name may
+  -- be both read and awaited, and an atom may read the variables it writes.
+  update: (Val (Dom := Dom) read) -> (Val (Dom := Dom) await) -> (Val (Dom := Dom) write) -> Prop
+
+  -- an atom never blocks: for all inputs, reachable or not, some values of
+  -- `write` are allowed
+  init_total: ∀ a, ∃ w, init a w
+  update_total: ∀ r a, ∃ w, update r a w
 
   -- an atom does not await the new value of a variable it writes
   await_write_disj: await ∩ write = ∅
+
+/-- A deterministic atom: `init` and `update` are functions. It is left-total
+    by construction. -/
+def Atom.ofFun (await read write : List Name)
+    (init : Val (Dom := Dom) await → Val (Dom := Dom) write)
+    (update : Val (Dom := Dom) read → Val (Dom := Dom) await → Val (Dom := Dom) write)
+    (await_write_disj : await ∩ write = ∅) : Atom (Name := Name) (Dom := Dom) where
+  await := await
+  read := read
+  write := write
+  init a w := w = init a
+  update r a w := w = update r a
+  init_total a := ⟨init a, rfl⟩
+  update_total r a := ⟨update r a, rfl⟩
+  await_write_disj := await_write_disj
+
 /-- `a` awaits `b`: `a` reads, in the same round, a variable that `b` writes. -/
 def Atom.awaits (a b : Atom (Name := Name) (Dom := Dom)) : Prop :=
   ∃ x ∈ a.await, x ∈ b.write
