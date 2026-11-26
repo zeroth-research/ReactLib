@@ -158,30 +158,9 @@ theorem Module.WF.exists_round {M : Module Dom} (hM : M.WF)
   · exact ht' x fun C hC hxC =>
       hx (hM.atoms_write_ctrl C ((hmem C).mp hC).1 hxC)
 
-/-! The two instances of the abstract round predicate. -/
-
-omit [DecidableEq Name] in
-theorem Atom.Init.congr {A : Atom Dom} {t t' : State Dom}
-    (ha : ∀ x ∈ A.await, t x = t' x) (hw : ∀ x ∈ A.write, t x = t' x)
-    (h : A.Init t) : A.Init t' := by
-  have e₁ : t.restrict A.await = t'.restrict A.await := by
-    funext x hx; exact ha x hx
-  have e₂ : t.restrict A.write = t'.restrict A.write := by
-    funext x hx; exact hw x hx
-  simpa [Atom.Init, e₁, e₂] using h
-
-omit [DecidableEq Name] in
-theorem Atom.Update.congr {A : Atom Dom} {s s' t t' : State Dom}
-    (hr : ∀ x ∈ A.read, s x = s' x)
-    (ha : ∀ x ∈ A.await, t x = t' x) (hw : ∀ x ∈ A.write, t x = t' x)
-    (h : A.Update s t) : A.Update s' t' := by
-  have e₀ : s.restrict A.read = s'.restrict A.read := by
-    funext x hx; exact hr x hx
-  have e₁ : t.restrict A.await = t'.restrict A.await := by
-    funext x hx; exact ha x hx
-  have e₂ : t.restrict A.write = t'.restrict A.write := by
-    funext x hx; exact hw x hx
-  simpa [Atom.Update, e₀, e₁, e₂] using h
+/-! Left-totality of atoms, as a change of state on their writes; the round
+    predicates `Atom.Init` and `Atom.Update s` satisfy `exists_round` with
+    these and `Atom.Init.congr` / `Atom.Update.congr` (`Relational.Semantics`). -/
 
 theorem Atom.exists_init (A : Atom Dom) (t : State Dom) :
     ∃ t', (∀ x, x ∉ A.write → t' x = t x) ∧ A.Init t' := by

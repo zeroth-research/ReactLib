@@ -108,37 +108,6 @@ theorem Module.WF.withPriv_eq {M : Module Dom} {s t : State Dom}
       tauto
     simp [Module.withPriv, hp, hobs x this]
 
-/-- An initial round of a well-formed module depends only on the variables
-    of the module. -/
-theorem Module.WF.initRound_congr {M : Module Dom} (hM : M.WF) {s t : State Dom}
-    (h : ∀ x ∈ M.vars, s x = t x) (hs : M.InitRound s) : M.InitRound t := by
-  intro A hA
-  have ha : t.restrict A.await = s.restrict A.await :=
-    funext fun x => funext fun hx => (h x (hM.atoms_await_vars A hA hx)).symm
-  have hw : t.restrict A.write = s.restrict A.write :=
-    funext fun x => funext fun hx => (h x (by
-      have := hM.atoms_write_ctrl A hA hx
-      simp only [Module.ctrl, Module.vars, Finset.mem_union] at this ⊢
-      tauto)).symm
-  simpa only [Atom.Init, ha, hw] using hs A hA
-
-/-- An update round of a well-formed module depends only on the variables
-    of the module. -/
-theorem Module.WF.updateRound_congr {M : Module Dom} (hM : M.WF) {s s' t t' : State Dom}
-    (h : ∀ x ∈ M.vars, s x = t x) (h' : ∀ x ∈ M.vars, s' x = t' x)
-    (hs : M.UpdateRound s s') : M.UpdateRound t t' := by
-  intro A hA
-  have hr : t.restrict A.read = s.restrict A.read :=
-    funext fun x => funext fun hx => (h x (hM.atoms_read_vars A hA hx)).symm
-  have ha : t'.restrict A.await = s'.restrict A.await :=
-    funext fun x => funext fun hx => (h' x (hM.atoms_await_vars A hA hx)).symm
-  have hw : t'.restrict A.write = s'.restrict A.write :=
-    funext fun x => funext fun hx => (h' x (by
-      have := hM.atoms_write_ctrl A hA hx
-      simp only [Module.ctrl, Module.vars, Finset.mem_union] at this ⊢
-      tauto)).symm
-  simpa only [Atom.Update, hr, ha, hw] using hs A hA
-
 /-- The traces of a well-formed module whose private variables have finite
     domains are a safety property: an ω-sequence all of whose prefixes are
     finite traces is a trace. -/

@@ -54,6 +54,58 @@ def Module.InitRound (M : Module Dom) (s : State Dom) : Prop :=
 def Module.UpdateRound (M : Module Dom) (s s' : State Dom) : Prop :=
   ∀ A ∈ M.atoms, A.Update s s'
 
+/-- An atom's initial round depends only on the variables it awaits and
+    writes. -/
+theorem Atom.Init.congr {A : Atom Dom} {t t' : State Dom}
+    (ha : ∀ x ∈ A.await, t x = t' x) (hw : ∀ x ∈ A.write, t x = t' x)
+    (h : A.Init t) : A.Init t' := by
+  have e₁ : t.restrict A.await = t'.restrict A.await := by
+    funext x hx; exact ha x hx
+  have e₂ : t.restrict A.write = t'.restrict A.write := by
+    funext x hx; exact hw x hx
+  simpa [Atom.Init, e₁, e₂] using h
+
+/-- An atom's update round depends only on the old values of the variables
+    it reads and the new values of those it awaits and writes. -/
+theorem Atom.Update.congr {A : Atom Dom} {s s' t t' : State Dom}
+    (hr : ∀ x ∈ A.read, s x = s' x)
+    (ha : ∀ x ∈ A.await, t x = t' x) (hw : ∀ x ∈ A.write, t x = t' x)
+    (h : A.Update s t) : A.Update s' t' := by
+  have e₀ : s.restrict A.read = s'.restrict A.read := by
+    funext x hx; exact hr x hx
+  have e₁ : t.restrict A.await = t'.restrict A.await := by
+    funext x hx; exact ha x hx
+  have e₂ : t.restrict A.write = t'.restrict A.write := by
+    funext x hx; exact hw x hx
+  simpa [Atom.Update, e₀, e₁, e₂] using h
+
+section Locality
+
+variable [DecidableEq Name]
+
+theorem Module.ctrl_subset_vars (M : Module Dom) : M.ctrl ⊆ M.vars := by
+  intro x
+  simp only [Module.ctrl, Module.vars, Finset.mem_union]
+  tauto
+
+/-- An initial round of a well-formed module depends only on the variables
+    of the module. -/
+theorem Module.WF.initRound_congr {M : Module Dom} (hM : M.WF) {s t : State Dom}
+    (h : ∀ x ∈ M.vars, s x = t x) (hs : M.InitRound s) : M.InitRound t :=
+  fun A hA => (hs A hA).congr (fun x hx => h x (hM.atoms_await_vars A hA hx))
+    (fun x hx => h x (M.ctrl_subset_vars (hM.atoms_write_ctrl A hA hx)))
+
+/-- An update round of a well-formed module depends only on the variables
+    of the module. -/
+theorem Module.WF.updateRound_congr {M : Module Dom} (hM : M.WF) {s s' t t' : State Dom}
+    (h : ∀ x ∈ M.vars, s x = t x) (h' : ∀ x ∈ M.vars, s' x = t' x)
+    (hs : M.UpdateRound s s') : M.UpdateRound t t' :=
+  fun A hA => (hs A hA).congr (fun x hx => h x (hM.atoms_read_vars A hA hx))
+    (fun x hx => h' x (hM.atoms_await_vars A hA hx))
+    (fun x hx => h' x (M.ctrl_subset_vars (hM.atoms_write_ctrl A hA hx)))
+
+end Locality
+
 /-! ### Runs -/
 
 /-- The transition system of `M`: its states are `State Dom`, its initial

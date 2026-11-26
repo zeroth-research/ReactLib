@@ -88,11 +88,6 @@ theorem Atom.exists_step (A : Atom Dom) (r : Nat → State Dom) (k : Nat) (t : S
   | zero => exact A.exists_init t
   | succ k => exact A.exists_update (r k) t
 
-theorem Module.ctrl_subset_vars (M : Module Dom) : M.ctrl ⊆ M.vars := by
-  intro x
-  simp only [Module.ctrl, Module.vars, Finset.mem_union]
-  tauto
-
 theorem Module.obs_subset_vars (M : Module Dom) : M.obs ⊆ M.vars := by
   intro x
   simp only [Module.obs, Module.vars, Finset.mem_union]
