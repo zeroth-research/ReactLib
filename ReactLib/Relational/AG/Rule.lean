@@ -9,7 +9,12 @@ import Relational.AG.Safety
   The implementation preorder is AH's Def. 3 (`Module.Implements`), with
   finite traces. Over ω-traces the rule also needs the private variables of
   the specifications to have finite domains
-  (`Module.assume_guarantee_trace`); see `notes/AG-FINDINGS.md`, Step 6.
+  (`Module.assume_guarantee_trace`). Premises given as trace inclusions turn
+  into `Implements` by `Module.Implements.of_trace`.
+
+  Also here: a composition implements its components
+  (`Module.compose_implements_left`, `_right`), and `Implements` is a
+  precongruence for composition [AH99, Prop. 4] (`Module.Implements.compose`).
 
   AH also rename the private variables of an implementation apart from its
   specification. This is not needed: `Pⱼ` and `Qⱼ` are never composed, and the
@@ -59,5 +64,42 @@ theorem Module.assume_guarantee_trace {P₁ P₂ Q₁ Q₂ : Module Dom}
   fun _ h => Module.trace_of_finTraces (wQ₁.compose wQ₂ hQ) hfin fun n =>
     (Module.assume_guarantee wP₁ wP₂ wQ₁ wQ₂ hP hQ hP₁Q₂ hQ₁P₂ hextl h₁ h₂).traces n _
       (h.finTrace n)
+
+/-! ### Compositionality -/
+
+/-- A composition implements its left component. -/
+theorem Module.compose_implements_left (M N : Module Dom) : (M.compose N).Implements M where
+  intf := Finset.subset_union_left
+  extl := fun _ hx => Module.obs_subset_compose_left M N (Finset.mem_union_right _ hx)
+  awaits _ _ _ _ h := Relation.TransGen.mono
+    (fun _ _ hd => Atom.dependsOn_append.mpr (.inl hd)) _ _ h
+  traces := by
+    rintro n ts ⟨r, hr, ho⟩
+    exact ⟨r, ((Module.finRun_compose M N n r).mp hr).1,
+      fun i hi x hx => ho i hi x (Module.obs_subset_compose_left M N hx)⟩
+
+/-- A composition implements its right component. -/
+theorem Module.compose_implements_right (M N : Module Dom) : (M.compose N).Implements N where
+  intf := Finset.subset_union_right
+  extl := fun _ hx => Module.obs_subset_compose_right M N (Finset.mem_union_right _ hx)
+  awaits _ _ _ _ h := Relation.TransGen.mono
+    (fun _ _ hd => Atom.dependsOn_append.mpr (.inr hd)) _ _ h
+  traces := by
+    rintro n ts ⟨r, hr, ho⟩
+    exact ⟨r, ((Module.finRun_compose M N n r).mp hr).2,
+      fun i hi x hx => ho i hi x (Module.obs_subset_compose_right M N hx)⟩
+
+/-- Compositionality [AH99, Prop. 4]: if `P` implements `Q`, then `P ∥ R`
+    implements `Q ∥ R`. An instance of the assume-guarantee rule. -/
+theorem Module.Implements.compose {P Q R : Module Dom} (h : P.Implements Q)
+    (wP : P.WF) (wQ : Q.WF) (wR : R.WF) (hPR : P.Composable R) (hQR : Q.Composable R) :
+    (P.compose R).Implements (Q.compose R) := by
+  refine Module.assume_guarantee wP wR wQ wR hPR hQR hPR hQR ?_
+    ((Module.compose_implements_left P R).trans h) (Module.compose_implements_right Q R)
+  intro x hx
+  simp only [Module.compose, Finset.mem_sdiff, Finset.mem_union] at hx
+  rcases hx.1 with hx | hx
+  · exact Module.obs_subset_compose_left P R (h.extl hx)
+  · exact Module.obs_subset_compose_right P R (Finset.mem_union_right _ hx)
 
 end Relational

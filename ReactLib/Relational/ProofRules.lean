@@ -39,8 +39,8 @@ theorem rule_globally {State: Type u} {Label : Type v}
     on `¬B` states (states where `B` does not hold),
     then every trace in the transition system visits
     `B` states infinitely often. (The existence of such
-    function proofs that `¬B` can be visited only finitely
-    often on any trace).
+    function proves that no trace stays in `¬B` states
+    forever; `¬B` states may still recur infinitely often.)
 
     To make the statement more powerful, we work relative to
     states `I` that overapproximate all states in the system
@@ -126,7 +126,7 @@ theorem TS.transfer {S : Type u} {T : Type u} {L : Type v} {L' : Type v}
   exact h x
 
 
-/-- a weaker version of rule_buchi -/
+/-- `rule_buchi` with the hypothesis on the ranking function curried. -/
 theorem rule_buchi' {State: Type u} {Label : Type v}
     (lts : TS State Label)                    -- the TS
     (B : State → Prop) [DecidablePred B]      -- proposition `B`
@@ -180,9 +180,8 @@ theorem rule_buchi_mat_nat
     (hinv : lts.StateSet_isInvariant I)
     (V : State → (Matrix (Fin v₁) (Fin v₂) Nat))             -- ranking function on
                                               -- (I ∧ ¬B)-states
-    -- assume `V` is a **bounded** function such that whenever `B` does not hold,
-    -- then in next steps the value of `V` decreases
-    --(h_rankpos: ∀ x y, V(s x y) ≥ 0)
+    -- assume that whenever `B` does not hold, then in the next step `V`
+    -- decreases (its entries are natural numbers, so bounded below)
     (h_rank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s')
               → (∀ x y, (V s') x y ≤ (V s) x y) ∧ (∃ x y, (V s') x y < (V s) x y)):
     -- Then then `B` holds infinitely many times
@@ -206,8 +205,8 @@ theorem rule_buchi_mat_int
     (hinv : lts.StateSet_isInvariant I)
     (V : State → (Matrix (Fin v₁) (Fin v₂) Int))             -- ranking function on
                                               -- (I ∧ ¬B)-states
-    -- assume `V` is a **bounded** function such that whenever `B` does not hold,
-    -- then in next steps the value of `V` decreases
+    -- assume that `V` is bounded below (`h_rankpos`) and that whenever `B`
+    -- does not hold, then in the next step `V` decreases
     (h_rankpos: ∀ s x y, (V s) x y ≥ 0)
     (h_rank : ∀ s s', I s ∧ ¬(B s) ∧ (∃ l, lts.Tr s l s')
               → (∀ x y, (V s') x y ≤ (V s) x y) ∧ (∃ x y, (V s') x y < (V s) x y)):

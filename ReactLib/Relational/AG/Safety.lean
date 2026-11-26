@@ -1,4 +1,4 @@
-import Relational.Semantics
+import Relational.AG.Traces
 import Mathlib.Basic.Finite.Prod
 import Mathlib.Data.Set.Finite.Lattice
 import Mathlib.Order.Bounds.Basic
@@ -20,6 +20,13 @@ import Mathlib.Order.Bounds.Basic
   Finiteness is needed: let a private counter start anywhere and count down
   to zero, and let an interface bit tell whether it is positive. Every
   `1ᵏ` is a finite trace, but `1^ω` is not a trace.
+
+  Conversely, every finite run of a well-formed module extends to a run
+  (`Module.WF.extend_finRun`, [AH99, Prop. 1]), so trace inclusion gives
+  finite-trace inclusion (`Module.finTraces_of_traces`). Hence `Implements`
+  can be established from trace inclusion (`Module.Implements.of_trace`),
+  and gives trace inclusion for specifications with finite private domains
+  (`Module.Implements.trace`).
 -/
 
 namespace Relational
@@ -139,5 +146,72 @@ theorem Module.trace_of_finTraces {M : Module Dom} (hM : M.WF)
     · exact h₂ hx
   show M.withPriv (ts i) (p i) x = ts i x
   simp [Module.withPriv, hx']
+
+/-! ### Finite and infinite traces -/
+
+/-- A finite run of a well-formed module extends to a run [AH99, Prop. 1]:
+    a well-formed module never blocks. -/
+theorem Module.WF.extend_finRun {M : Module Dom} (hM : M.WF) {n : Nat}
+    {r : Nat → State Dom} (h : M.FinRun n r) :
+    ∃ ss : Cslib.ωSequence (State Dom), M.Run ss ∧ ∀ i ≤ n, ss i = r i := by
+  choose f hf using fun s => hM.exists_updateRound s s
+  let g : Nat → State Dom := fun i => if i ≤ n then r i else f^[i - n] (r n)
+  refine ⟨⟨g⟩, ⟨?_, fun i => ?_⟩, fun i hi => by show g i = r i; simp [g, hi]⟩
+  · show M.InitRound (g 0); simpa [g] using h.1
+  · show M.UpdateRound (g i) (g (i + 1))
+    by_cases hi : i < n
+    · simpa [g, show i ≤ n by omega, show i + 1 ≤ n by omega] using h.2 i hi
+    · have e : i + 1 - n = (i - n) + 1 := by omega
+      have hg : g (i + 1) = f (g i) := by
+        simp only [g, show ¬ i + 1 ≤ n by omega, ite_false, e, Function.iterate_succ_apply']
+        by_cases hin : i ≤ n
+        · have : i = n := by omega
+          subst this; simp
+        · simp [hin]
+      rw [hg]; exact (hf (g i)).1
+
+/-- The finite traces of a well-formed module are the prefixes of its
+    traces. -/
+theorem Module.WF.finTrace_iff {M : Module Dom} (hM : M.WF) {n : Nat}
+    {ts : Nat → State Dom} :
+    M.FinTrace n ts ↔ ∃ ts' : Cslib.ωSequence (State Dom), M.Trace ts' ∧
+      ∀ i ≤ n, ∀ x ∈ M.obs, ts' i x = ts i x := by
+  constructor
+  · rintro ⟨r, hr, ho⟩
+    obtain ⟨ss, hrun, hss⟩ := hM.extend_finRun hr
+    exact ⟨ss, hrun.trace, fun i hi x hx => by rw [hss i hi]; exact ho i hi x hx⟩
+  · rintro ⟨ts', ⟨ss, hrun, hss⟩, h⟩
+    exact ⟨ss, hrun.finRun n, fun i hi x hx => (hss i x hx).trans (h i hi x hx)⟩
+
+/-- Trace inclusion implies finite-trace inclusion, for a well-formed
+    implementation. -/
+theorem Module.finTraces_of_traces {P Q : Module Dom} (hP : P.WF) (hobs : Q.obs ⊆ P.obs)
+    (h : ∀ ts, P.Trace ts → Q.Trace ts) : ∀ n ts, P.FinTrace n ts → Q.FinTrace n ts := by
+  intro n ts hts
+  obtain ⟨ts', ht', hagree⟩ := hP.finTrace_iff.mp hts
+  obtain ⟨q, hq, hqo⟩ := (h ts' ht').finTrace n
+  exact ⟨q, hq, fun i hi x hx => (hqo i hi x hx).trans (hagree i hi x (hobs hx))⟩
+
+/-- Finite-trace inclusion implies trace inclusion when the private
+    variables of the specification have finite domains. -/
+theorem Module.Implements.trace {P Q : Module Dom} (h : P.Implements Q) (hQ : Q.WF)
+    (hfin : ∀ x ∈ Q.priv, Finite (Dom x)) : ∀ ts, P.Trace ts → Q.Trace ts :=
+  fun _ hts => Module.trace_of_finTraces hQ hfin fun n => h.traces n _ (hts.finTrace n)
+
+/-- `Implements` with trace inclusion in place of finite-trace inclusion,
+    for a well-formed implementation. -/
+theorem Module.Implements.of_trace {P Q : Module Dom} (hP : P.WF)
+    (intf : Q.intf ⊆ P.intf) (extl : Q.extl ⊆ P.obs)
+    (awaits : ∀ x ∈ Q.obs, ∀ y ∈ Q.intf, Q.Awaits y x → P.Awaits y x)
+    (h : ∀ ts, P.Trace ts → Q.Trace ts) : P.Implements Q where
+  intf := intf
+  extl := extl
+  awaits := awaits
+  traces := Module.finTraces_of_traces hP (by
+    intro x hx
+    simp only [Module.obs, Finset.mem_union] at hx
+    rcases hx with hx | hx
+    · exact Finset.mem_union_left _ (intf hx)
+    · exact extl hx) h
 
 end Relational

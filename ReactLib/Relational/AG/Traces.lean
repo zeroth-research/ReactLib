@@ -211,6 +211,40 @@ theorem Module.FinTrace.compose {M₁ M₂ : Module Dom} (h₁ : M₁.WF) (h₂ 
   simp only [Module.compose, Finset.mem_union, not_or] at hp
   simp [rr, hp.1, hp.2]
 
+/-- A common trace of two composable modules is a trace of their composition
+    [AH99, Prop. 3]: the converse of `Module.Trace.of_compose`. -/
+theorem Module.Trace.compose {M₁ M₂ : Module Dom} (h₁ : M₁.WF) (h₂ : M₂.WF)
+    (hc : M₁.Composable M₂) {ts : Cslib.ωSequence (State Dom)}
+    (t₁ : M₁.Trace ts) (t₂ : M₂.Trace ts) : (M₁.compose M₂).Trace ts := by
+  obtain ⟨r₁, hr₁, ho₁⟩ := t₁
+  obtain ⟨r₂, hr₂, ho₂⟩ := t₂
+  let rr : Cslib.ωSequence (State Dom) := ⟨fun i x =>
+    if x ∈ M₁.priv then r₁ i x else if x ∈ M₂.priv then r₂ i x else ts i x⟩
+  have e₁ : ∀ i, ∀ x ∈ M₁.vars, r₁ i x = rr i x := by
+    intro i x hx
+    by_cases hp : x ∈ M₁.priv
+    · simp [rr, hp]
+    · have hp₂ : x ∉ M₂.priv := fun h => Finset.disjoint_left.mp hc.priv₂_disj h hx
+      simp [rr, hp, hp₂, ho₁ i x (Module.mem_obs_of_not_priv hx hp)]
+  have e₂ : ∀ i, ∀ x ∈ M₂.vars, r₂ i x = rr i x := by
+    intro i x hx
+    have hp₁ : x ∉ M₁.priv := fun h => Finset.disjoint_left.mp hc.priv₁_disj h hx
+    by_cases hp : x ∈ M₂.priv
+    · simp [rr, hp, hp₁]
+    · simp [rr, hp, hp₁, ho₂ i x (Module.mem_obs_of_not_priv hx hp)]
+  refine ⟨rr, (Module.run_compose M₁ M₂ rr).mpr
+    ⟨.of_finRun fun n => h₁.finRun_congr (fun i _ => e₁ i) (hr₁.finRun n),
+     .of_finRun fun n => h₂.finRun_congr (fun i _ => e₂ i) (hr₂.finRun n)⟩,
+    fun i x hx => ?_⟩
+  have w := h₁.compose h₂ hc
+  have hp : x ∉ (M₁.compose M₂).priv := by
+    intro hp
+    rcases Finset.mem_union.mp hx with h | h
+    · exact Finset.disjoint_left.mp w.intf_priv_disj h hp
+    · exact Finset.disjoint_left.mp w.extl_priv_disj h hp
+  simp only [Module.compose, Finset.mem_union, not_or] at hp
+  simp [rr, hp.1, hp.2]
+
 /-! ### Partial traces -/
 
 /-- `ts` is an `X`-partial trace of `N` with `k` full rounds: some run of `N`

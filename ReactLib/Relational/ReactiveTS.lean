@@ -68,8 +68,8 @@ def toTS (module: ReactiveTS Extl State): TS State Extl :=
     start := module.TS_init
   }
 
-/-- The TS for a `ReactiveTS` defines exactly the traces of the
-    `ReactiveTS` -/
+/-- Every ω-trace of the TS of a `ReactiveTS` is a trace of the
+    `ReactiveTS`; the converse is `traces_to_TS`. -/
 theorem TS_traces (M: ReactiveTS Extl State):
   ∀ ss μs, M.toTS.ωTrace ss μs → M.traces ss := by
   intro ss μs h

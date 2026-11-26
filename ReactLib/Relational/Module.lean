@@ -61,7 +61,8 @@ def Atom.ofFun (await read write : Finset Name)
 
 /-! ### Await dependencies -/
 
-/-- `a` awaits `b`: `a` reads, in the same round, a variable that `b` writes. -/
+/-- `a` awaits `b`: `a` awaits (uses the new value, in the same round, of) a
+    variable that `b` writes. -/
 def Atom.awaits (a b : Atom Dom) : Prop :=
   ∃ x ∈ a.await, x ∈ b.write
 

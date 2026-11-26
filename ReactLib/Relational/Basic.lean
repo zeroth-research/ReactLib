@@ -61,11 +61,12 @@ def ωTrace (ts : TS State Label)
     (ss : Cslib.ωSequence State) (μs : Cslib.ωSequence Label) : Prop :=
   ts.start (ss.get 0) ∧ ts.OmegaExecution ss μs
 
-/- is state reachable? -/
+/- is the state on some ω-trace? States reachable only along finite paths
+   that cannot be extended to an infinite run do not count. -/
 def reachable (lts : TS State Label) (s : State) : Prop :=
   ∃ ss μs, lts.ωTrace ss μs ∧ ∃ n: Nat, ss.get n = s
 
-/- set of reachable states -/
+/- the set of states on ω-traces (see `reachable`) -/
 def reachableSet (lts : TS State Label) : StateSet State :=
   fun s => lts.reachable s
 
@@ -73,7 +74,9 @@ def reachableSet (lts : TS State Label) : StateSet State :=
 def StateSet_isInductive (lts : TS State Label) (S : StateSet State) : Prop :=
   ∀ s s' : State, s ∈ S ∧ (∃ l, lts.Tr s l s') → s' ∈ S
 
-/- a set of states is invariant, i.e., a superset of reachable states -/
+/- a set of states is invariant: it contains every state on an ω-trace
+   (`reachableSet`). This is what ω-trace properties need; a system with no
+   infinite run has every set, even `∅`, as an invariant. -/
 def StateSet_isInvariant (lts : TS State Label)
     (S : StateSet State) : Prop :=
   lts.reachableSet ⊆ S

@@ -133,6 +133,11 @@ theorem Module.Run.finRun {M : Module Dom} {ss : Cslib.ωSequence (State Dom)}
     (h : M.Run ss) (n : Nat) : M.FinRun n ss :=
   ⟨h.1, fun i _ => h.2 i⟩
 
+/-- A sequence all of whose prefixes are finite runs is a run. -/
+theorem Module.Run.of_finRun {M : Module Dom} {ss : Cslib.ωSequence (State Dom)}
+    (h : ∀ n, M.FinRun n ss) : M.Run ss :=
+  ⟨(h 0).1, fun i => (h (i + 1)).2 i (Nat.lt_succ_self i)⟩
+
 /-! ### Traces -/
 
 section Traces
@@ -213,8 +218,8 @@ theorem Module.obs_subset_compose_right (M₁ M₂ : Module Dom) :
   tauto
 
 /-- A trace of a composition is a trace of both components. The converse
-    does not hold in general: the components may need different values of
-    their private variables, and the composition observes more. -/
+    holds for well-formed composable modules (`Module.Trace.compose`, in
+    `Relational.AG.Traces`). -/
 theorem Module.Trace.of_compose {M₁ M₂ : Module Dom} {ts}
     (h : (M₁.compose M₂).Trace ts) : M₁.Trace ts ∧ M₂.Trace ts := by
   obtain ⟨ss, hrun, hss⟩ := h
