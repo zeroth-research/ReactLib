@@ -25,10 +25,10 @@ Paths below are relative to `ReactLib/`.
 | 3 | Private variables are never written | **fixed** |
 | 4 | Atoms are deterministic functions | **fixed**: left-total relations, `Atom.ofFun` |
 | 5 | `ReactiveTS.compose` is intersection, not parallel composition | open |
-| 6 | Implicit `Name`/`Dom`; `compose` takes a proof | open |
-| 7 | Name sets as lists with `∩ = ∅` | open |
-| 8 | Off-by-one in `ReactiveTS.traces'` | open |
-| 9 | Await acyclicity is atom-level only | open |
+| 6 | Implicit `Name`/`Dom`; `compose` takes a proof | **fixed**: `Module Dom`, total `compose`, `Module.WF` |
+| 7 | Name sets as lists with `∩ = ∅` | **fixed**: `Finset` and `Disjoint` |
+| 8 | Off-by-one in `ReactiveTS.traces'` | **fixed** |
+| 9 | Await acyclicity is atom-level only | **fixed**: `Atom.dependsOn`, `acyclic_iff_nameAcyclic` |
 
 `69a3ed1` is a pure move: a sorted-line diff of old `Basic` against the new
 three files shows only headers and imports changed.
@@ -47,21 +47,21 @@ three files shows only headers and imports changed.
    `await ∩ read = ∅` forbade reading `x` while awaiting `x'`. The cause was
    `update : Val (read ++ await) → Val write`, which gives one value per name.
    Now `update : Val read → Val await → Val write`
-   (`Relational/Module.lean:30`), and only `await_write_disj` remains, as in
+   (`Relational/Module.lean:37`, now a relation, see 4), and only `await_write_disj` remains, as in
    Alur–Henzinger.
 
 3. **Fixed — private variables were never written.** The atoms had to write
    exactly `intf`, so `priv` acted as an unconstrained hidden input. Now the
    atoms write exactly the controlled variables: `atoms_cov_ctrl` and
-   `atoms_write_ctrl` over `intf ++ priv` (`Relational/Module.lean:73-74`).
-   `Module.compose` re-proves both; disjointness of the controlled sets comes
-   from `composable`.
+   `atoms_write_ctrl` over `M.ctrl = intf ∪ priv` (`Relational/Module.lean:167-168`).
+   `Module.WF.compose` re-proves both; disjointness of the controlled sets
+   comes from `Module.Composable`.
 
 4. **Fixed — atoms were deterministic functions.** With functions, a
    specification cannot be more nondeterministic than its implementation
    except through external variables, so refinement and AG were nearly
    vacuous. Atoms are now left-total relations, as in Alur–Henzinger and the
-   paper's `AtomicTrans` (`Relational/Module.lean:25-35`): `init` and
+   paper's `AtomicTrans` (`Relational/Module.lean:33-42`): `init` and
    `update` are predicates on the written values, and the fields `init_total`
    and `update_total` say some written values are allowed for *all* inputs,
    reachable or not. Deterministic atoms (implementations, generated code) are
@@ -94,42 +94,54 @@ three files shows only headers and imports changed.
    own a proper part of the state, so components need a different
    constructor (`TS.leftComp` in `notes/AG.lean`).
 
-6. **Implicit `Name`/`Dom`; `compose` takes a proof**
-   (`Relational/Module.lean:13-15, 96`). `Dom` is never inferable, hence
-   `(Name := Name) (Dom := Dom)` everywhere. `Module.compose M₁ M₂ h` will be
-   painful for AG, which juggles four composites and their proofs. The paper
-   uses a total `parComp` on a `RawModule` plus a separate `WF` predicate
-   (`lean/ReactiveModules/Relational/Model/Module.lean`). Proof fields also
-   force `Module.ext` and `cases` gymnastics.
+6. **Fixed — implicit `Name`/`Dom`; `compose` took a proof.** `Dom` was
+   never inferable, hence `(Name := Name) (Dom := Dom)` everywhere, and
+   `Module.compose M₁ M₂ h` would have been painful for AG, which juggles
+   four composites and their proofs. Now `Atom Dom` and `Module Dom` take
+   `Dom` explicitly (`Name` is inferred from it). `Module` is plain data with
+   `@[ext]`; well-formedness is the separate predicate `Module.WF`, and
+   composability the predicate `Module.Composable`, both structures with
+   named fields. `Module.compose` is total, as the paper's `parComp` on
+   `RawModule`, and `Module.WF.compose` shows it preserves well-formedness
+   for composable modules. Associativity is now an unconditional equality
+   (`Module.compose_assoc`), and the composability side of it is
+   `Module.Composable.assoc` / `assoc'`. Atoms keep their proof fields
+   (totality, `await_write_disj`): they are leaves and are never composed.
 
-7. **Name sets as lists** (`Relational/Module.lean:33, 67-70, 90-92, 106`).
-   `X ∩ Y = ∅` is `List.inter … = []`, and every use starts with
-   `simp [List.eq_nil_iff_forall_not_mem]`. Commutativity holds only up to
-   `Perm` (`Module.Equiv`, line 186), and nothing shows `Equiv` is a
-   congruence for `compose` or for the future semantics. Use `Finset Name`,
-   or a `Disjoint X Y := ∀ x ∈ X, x ∉ Y` predicate with membership-level
-   equivalence (paper: `ListDisjoint` in `Common/Basic.lean`).
-   `Val X := ∀ x ∈ X, Dom x` is workable but needs `proj`/`extend`/`ext`
-   lemmas; for semantics a total valuation `∀ x, Dom x` as the state is much
-   easier.
+   Caveat: after `open Relational`, a bare `Module` is ambiguous with
+   Mathlib's; write `Module Dom` or `Relational.Module`.
 
-8. **Off-by-one in `ReactiveTS.traces'`** (`Relational/ReactiveTS.lean:37`,
-   predates these commits). It requires `update_pre (inps i)` for all `i`,
-   including `inps 0`, which is only the init input. It should be
-   `update_pre (inps (i + 1))`. `traces` does not have this problem.
+7. **Fixed — name sets were lists.** `X ∩ Y = ∅` was `List.inter … = []`,
+   and commutativity held only up to `Perm` of every field. Now all name sets
+   are `Finset Name` with `Disjoint`, and `Val Dom X := ∀ x ∈ X, Dom x` is
+   over a `Finset`. Atoms stay a `List` (acyclicity and pairwise disjointness
+   are stated over it), so `Module.Equiv` is equality of the name sets plus
+   `Perm` of the atoms. `Module.compose_comm` is unconditional, and
+   `Equiv` is an equivalence (`refl`, `symm`, `trans`), a congruence for
+   `compose`, and preserves `WF` and `Composable`. Still to come for
+   semantics: `proj`/`extend` lemmas for `Val`, or a total valuation
+   `∀ x, Dom x` as the state, which is much easier.
 
-9. **Await acyclicity is atom-level only** (`Atom.Acyclic`,
-   `Relational/Module.lean:40`). Alur–Henzinger's refinement clause 3 (spec
-   awaits ⊆ impl awaits) needs the name-level await relation; define it and
-   derive the atom-level form. `stateTraces_compose`
-   (`Relational/Basic.lean:135`) being one-directional is correct as
-   documented.
+8. **Fixed — off-by-one in `ReactiveTS.traces'`.** It required
+   `update_pre (inps i)` for all `i`, including `inps 0`, which is only the
+   init input. It now requires `update_pre (inps (i + 1))`, matching the
+   input the update uses; `traces'_impl_traces` and `traces'_compose` use
+   `hi i` where they used `hi (i + 1)` to work around it.
+
+9. **Fixed — await acyclicity was atom-level only.** Alur–Henzinger's
+   refinement clause 3 (spec awaits ⊆ impl awaits) needs the name-level
+   await relation. `Atom.dependsOn As x y` says some atom of `As` writes `x`
+   and awaits `y`, `Atom.NameAcyclic` says it has no cycle, and
+   `Atom.acyclic_iff_nameAcyclic` shows this is the same as the atom-level
+   `Atom.Acyclic`. `stateTraces_compose` (`Relational/Basic.lean:135`) being
+   one-directional is correct as documented.
 
 ## Route to the AG rule
 
 Build on the semantic `TS` layer, over a shared global state, with
 `TS.compose` as intersection. Connect `Relational.Module` later through a
-`Module.toTS`, once it has trace semantics.
+`Module.toTS`, once it has trace semantics; the AG statements there take
+`WF` and `Composable` hypotheses.
 
 Steps 0–3 are fully proved in `notes/AG.lean` (about 280 lines, imports only
 `Relational.Basic`, no `sorry`, axioms `propext`, `Classical.choice`,
