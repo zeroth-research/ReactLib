@@ -37,7 +37,9 @@ structure Atom (Dom : Name → Type u) where
   update : Val Dom read → Val Dom await → Val Dom write → Prop
 
   -- an atom never blocks: for all inputs, reachable or not, some values of
-  -- `write` are allowed
+  -- `write` are allowed. Unlike AH's executable atoms, an atom may allow
+  -- infinitely many; limit closure of traces needs finite branching
+  -- (`Module.FinBranching`, `Relational.AG.Safety`)
   init_total : ∀ a, ∃ w, init a w
   update_total : ∀ r a, ∃ w, update r a w
 
