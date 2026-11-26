@@ -11,7 +11,8 @@ name = "Spec"
 # reactive transition systems with their transition-system semantics
 # (`Relational.ReactiveTS`), Alur–Henzinger reactive modules and their
 # composition (`Relational.Module`), their rounds, runs and traces
-# (`Relational.Semantics`), and proof rules stated in `Spec`'s LTL
+# (`Relational.Semantics`), the assume-guarantee rule for them
+# (`Relational.AG`), and proof rules stated in `Spec`'s LTL
 # (`Relational.ProofRules`).
 [[lean_lib]]
 name = "Relational"

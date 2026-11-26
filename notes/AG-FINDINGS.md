@@ -142,6 +142,25 @@ three files shows only headers and imports changed.
 
 ## Route to the AG rule
 
+**Target, stated in `Relational/AG.lean` (proofs `sorry`).**
+`Module.Implements P Q` is AH's Def. 3: (1) `Q.intf ⊆ P.intf`, (2)
+`Q.extl ⊆ P.obs`, (3) `P` has the await dependencies `Q.Awaits y x` of `Q`
+for `y ∈ Q.intf`, `x ∈ Q.obs` (`Module.Awaits` is the transitive closure of
+`Atom.dependsOn`), and (4) finite trace containment (`Module.FinTrace`). It
+is a preorder (`refl`, `trans`, proved). `Module.assume_guarantee` is AH's
+Prop. 5 over finite traces: well-formed `P₁ P₂ Q₁ Q₂`, the four composites
+`Composable`, each `Pⱼ` `Scoped` against `Qⱼ` (no private variable of one is
+a variable of the other; AH assume this by renaming, and the paper's
+`cor:ag-ah99` needs it as "scoping"), and the externals of `Q₁ ∥ Q₂`
+observable in `P₁ ∥ P₂`. `Module.assume_guarantee_trace` is the ω-trace
+version, which also assumes finite domains for the private variables of
+`Q₁` and `Q₂` (Step 6). Because (3) is in `Implements`, this is the rule
+with AH's await clause, not the unsound `thm:ag-sem` (Step 5): proving
+`assume_guarantee` needs Step 5, and `assume_guarantee_trace` Steps 5
+and 6.
+
+The steps below are the route to it.
+
 Build on the semantic `TS` layer, over a shared global state, with
 `TS.compose` as intersection. Connect `Relational.Module` later through a
 `Module.toTS`, once it has trace semantics; the AG statements there take

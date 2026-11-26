@@ -72,6 +72,15 @@ theorem Module.run_iff_ωTrace (M : Module Dom) (ss : Cslib.ωSequence (State Do
     (μs : Cslib.ωSequence Unit) : M.Run ss ↔ M.toTS.ωTrace ss μs :=
   Iff.rfl
 
+/-- A run of `M` with `n` update rounds: the states `ss 0, …, ss n`. Later
+    states are irrelevant. -/
+def Module.FinRun (M : Module Dom) (n : Nat) (ss : Nat → State Dom) : Prop :=
+  M.InitRound (ss 0) ∧ ∀ i < n, M.UpdateRound (ss i) (ss (i + 1))
+
+theorem Module.Run.finRun {M : Module Dom} {ss : Cslib.ωSequence (State Dom)}
+    (h : M.Run ss) (n : Nat) : M.FinRun n ss :=
+  ⟨h.1, fun i _ => h.2 i⟩
+
 /-! ### Traces -/
 
 section Traces
@@ -93,6 +102,17 @@ theorem Module.Trace.congr {M : Module Dom} {ts ts'} (h : M.Trace ts)
     (hobs : ∀ i, ∀ x ∈ M.obs, ts i x = ts' i x) : M.Trace ts' := by
   obtain ⟨ss, hrun, hss⟩ := h
   exact ⟨ss, hrun, fun i x hx => (hss i x hx).trans (hobs i x hx)⟩
+
+/-- `ts` is a trace prefix of `M` of length `n + 1`: its states `0, …, n`
+    agree with a finite run of `M` on the observable variables. These are
+    Alur and Henzinger's traces, which are finite. -/
+def Module.FinTrace (M : Module Dom) (n : Nat) (ts : Nat → State Dom) : Prop :=
+  ∃ ss, M.FinRun n ss ∧ ∀ i ≤ n, ∀ x ∈ M.obs, ss i x = ts i x
+
+theorem Module.Trace.finTrace {M : Module Dom} {ts : Cslib.ωSequence (State Dom)}
+    (h : M.Trace ts) (n : Nat) : M.FinTrace n ts := by
+  obtain ⟨ss, hrun, hss⟩ := h
+  exact ⟨ss, hrun.finRun n, fun i _ x hx => hss i x hx⟩
 
 end Traces
 
