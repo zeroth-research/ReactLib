@@ -1,6 +1,14 @@
 import Batteries.Data.List.Basic
 import Batteries.Data.List.Lemmas
 
+/-!
+  Reactive modules in the style of Alur and Henzinger: atoms over named
+  variables, modules built from atoms, their parallel composition, and its
+  commutativity and associativity.
+-/
+
+namespace Relational
+
 -- the type of names
 variable {Name : Type 0} [DecidableEq Name]
 -- domain for names (mapping names to their types)
@@ -232,3 +240,5 @@ theorem Module.compose_assoc {M₁ M₂ M₃ : Module (Name := Name) (Dom := Dom
   all_goals first
     | (funext x; simp; grind)
     | (apply List.filter_congr; intro x _; simp; try grind)
+
+end Relational

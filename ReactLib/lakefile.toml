@@ -1,6 +1,6 @@
 name = "ReactLib"
 version = "0.1.0"
-defaultTargets = ["Spec", "Relational", "Common"]
+defaultTargets = ["Spec", "Relational"]
 
 # Specifications: LTL formulas over ω-sequences of states and their
 # semantics (`Spec.LTL`).
@@ -9,15 +9,11 @@ name = "Spec"
 
 # Matrices (`Relational.Mat`), transition systems (`Relational.Basic`),
 # reactive transition systems with their transition-system semantics
-# (`Relational.ReactiveTS`) and proof rules stated in `Spec`'s LTL
+# (`Relational.ReactiveTS`), Alur–Henzinger reactive modules and their
+# composition (`Relational.Module`), and proof rules stated in `Spec`'s LTL
 # (`Relational.ProofRules`).
 [[lean_lib]]
 name = "Relational"
-
-# Atoms and modules over named variables, their composition, and its
-# commutativity and associativity (`Common.Module`).
-[[lean_lib]]
-name = "Common"
 
 # Mathlib comes through cslib, at the revision cslib pins. Reactor's
 # generated projects require the same cslib, so the two resolve as one.
