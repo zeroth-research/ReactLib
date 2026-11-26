@@ -154,33 +154,30 @@ theorem Module.WF.exists_round {M : Module Dom} (hM : M.WF)
     predicates `Atom.Init` and `Atom.Update s` satisfy `exists_round` with
     these and `Atom.Init.congr` / `Atom.Update.congr` (`Relational.Semantics`). -/
 
-theorem Atom.exists_init (A : Atom Dom) (t : State Dom) :
-    ∃ t', (∀ x, x ∉ A.write → t' x = t x) ∧ A.Init t' := by
-  obtain ⟨w, hw⟩ := A.init_total (t.restrict A.await)
+/-- An atom can write any values `w` it allows given the awaited values of `t`:
+    overwriting `t` on `A.write` with `w` leaves those awaited values alone. -/
+theorem Atom.exists_write (A : Atom Dom) (P : Val Dom A.await → Val Dom A.write → Prop)
+    (t : State Dom) (h : ∃ w, P (t.restrict A.await) w) :
+    ∃ t' : State Dom, (∀ x, x ∉ A.write → t' x = t x) ∧
+      P (t'.restrict A.await) (t'.restrict A.write) := by
+  obtain ⟨w, hw⟩ := h
   refine ⟨fun x => if h : x ∈ A.write then w x h else t x, fun x hx => by simp [hx], ?_⟩
   have e₁ : State.restrict (fun x => if h : x ∈ A.write then w x h else t x) A.await
       = t.restrict A.await := by
     funext x hx
-    have : x ∉ A.write := Finset.disjoint_left.mp A.await_write_disj hx
-    simp [State.restrict, this]
+    simp [State.restrict, Finset.disjoint_left.mp A.await_write_disj hx]
   have e₂ : State.restrict (fun x => if h : x ∈ A.write then w x h else t x) A.write = w := by
     funext x hx
     simp [State.restrict, hx]
-  simpa [Atom.Init, e₁, e₂] using hw
+  rwa [e₁, e₂]
+
+theorem Atom.exists_init (A : Atom Dom) (t : State Dom) :
+    ∃ t', (∀ x, x ∉ A.write → t' x = t x) ∧ A.Init t' :=
+  A.exists_write A.init t (A.init_total _)
 
 theorem Atom.exists_update (A : Atom Dom) (s t : State Dom) :
-    ∃ t', (∀ x, x ∉ A.write → t' x = t x) ∧ A.Update s t' := by
-  obtain ⟨w, hw⟩ := A.update_total (s.restrict A.read) (t.restrict A.await)
-  refine ⟨fun x => if h : x ∈ A.write then w x h else t x, fun x hx => by simp [hx], ?_⟩
-  have e₁ : State.restrict (fun x => if h : x ∈ A.write then w x h else t x) A.await
-      = t.restrict A.await := by
-    funext x hx
-    have : x ∉ A.write := Finset.disjoint_left.mp A.await_write_disj hx
-    simp [State.restrict, this]
-  have e₂ : State.restrict (fun x => if h : x ∈ A.write then w x h else t x) A.write = w := by
-    funext x hx
-    simp [State.restrict, hx]
-  simpa [Atom.Update, e₁, e₂] using hw
+    ∃ t', (∀ x, x ∉ A.write → t' x = t x) ∧ A.Update s t' :=
+  A.exists_write (A.update (s.restrict A.read)) t (A.update_total _ _)
 
 /-- A module never blocks: any state has a successor that takes prescribed values
     outside the controlled variables. No `Nonempty (Dom x)` is needed, `e` is the
