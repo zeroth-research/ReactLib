@@ -1,7 +1,5 @@
 import Relational.AG.Traces
-import Mathlib.Basic.Finite.Prod
-import Mathlib.Data.Set.Finite.Lattice
-import Mathlib.Order.Bounds.Basic
+import Mathlib.Order.KonigLemma
 
 /-!
   The traces of a reactive module are a safety property: an ω-sequence all
@@ -42,61 +40,55 @@ namespace Relational
 
 universe u
 
-/-- König's lemma. If `R₀` holds of finitely many values, every value has
-    finitely many `R i`-successors, and for every `n` some sequence starts in
-    `R₀` and makes its first `n` steps along `R`, then some sequence starts
-    in `R₀` and makes all its steps along `R`. -/
+/-- König's lemma for chains. If `R₀` holds of finitely many values, every
+    value has finitely many `R i`-successors, and for every `n` some sequence
+    starts in `R₀` and makes its first `n` steps along `R`, then some sequence
+    starts in `R₀` and makes all its steps along `R`. From Mathlib's
+    `exists_seq_forall_proj_of_forall_finite`, with the chains of length
+    `n + 1` as level `n`. -/
 theorem exists_chain_of_finite_branching {V : Type*} (R₀ : V → Prop)
     (R : Nat → V → V → Prop)
     (h₀ : {v | R₀ v}.Finite) (hR : ∀ i v, {v' | R i v v'}.Finite)
     (h : ∀ n, ∃ p : Nat → V, R₀ (p 0) ∧ ∀ i < n, R i (p i) (p (i + 1))) :
     ∃ p : Nat → V, R₀ (p 0) ∧ ∀ i, R i (p i) (p (i + 1)) := by
-  -- `Ext k v`: chains of every length pass through `v` at position `k`
-  let Ext (k : Nat) (v : V) : Prop :=
-    ∀ n, k ≤ n → ∃ p : Nat → V, (R₀ (p 0) ∧ ∀ i < n, R i (p i) (p (i + 1))) ∧ p k = v
-  -- some initial value extends to every length
-  have h0 : ∃ v, Ext 0 v := by
-    by_contra hne
-    have : ∀ v, ∃ n, ∀ p : Nat → V,
-        (R₀ (p 0) ∧ ∀ i < n, R i (p i) (p (i + 1))) → p 0 ≠ v := by
-      intro v
-      by_contra hv
-      exact hne ⟨v, fun n _ => by
-        by_contra hn
-        exact hv ⟨n, fun p hp hpv => hn ⟨p, hp, hpv⟩⟩⟩
-    choose f hf using this
-    -- only the finitely many initial values matter
-    obtain ⟨N, hN⟩ := (h₀.image f).bddAbove
-    obtain ⟨p, hp0, hp⟩ := h N
-    exact hf (p 0) p
-      ⟨hp0, fun i hi => hp i (lt_of_lt_of_le hi (hN ⟨p 0, hp0, rfl⟩))⟩ rfl
-  -- and so does one of the successors of a value that does
-  have hstep : ∀ k v, Ext k v → ∃ v', Ext (k + 1) v' ∧ R k v v' := by
-    intro k v hv
-    by_contra hne
-    have : ∀ v', ∃ n, R k v v' → k + 1 ≤ n ∧ ∀ p : Nat → V,
-        (R₀ (p 0) ∧ ∀ i < n, R i (p i) (p (i + 1))) → p (k + 1) ≠ v' := by
-      intro v'
-      by_contra hv'
-      refine hne ⟨v', fun n hn => ?_, ?_⟩
-      · by_contra hn'
-        exact hv' ⟨n, fun _ => ⟨hn, fun p hp hpv => hn' ⟨p, hp, hpv⟩⟩⟩
-      · by_contra hR
-        exact hv' ⟨0, fun hR' => absurd hR' hR⟩
-    choose f hf using this
-    -- only the finitely many successors of `v` matter
-    obtain ⟨N, hN⟩ := ((hR k v).image f).bddAbove
-    obtain ⟨p, ⟨hp0, hp⟩, hpk⟩ := hv (max N (k + 1)) (by omega)
-    have hR' : R k v (p (k + 1)) := hpk ▸ hp k (by omega)
-    have hle : f (p (k + 1)) ≤ N := hN ⟨_, hR', rfl⟩
-    exact (hf (p (k + 1)) hR').2 p ⟨hp0, fun i hi => hp i (by omega)⟩ rfl
-  choose g hg hgR using hstep
-  let q : (k : Nat) → {v // Ext k v} :=
-    fun k => Nat.rec ⟨h0.choose, h0.choose_spec⟩ (fun k v => ⟨g k v.1 v.2, hg k v.1 v.2⟩) k
-  refine ⟨fun k => (q k).1, ?_, fun k => hgR k (q k).1 (q k).2⟩
-  obtain ⟨p, ⟨hp0, -⟩, hp⟩ := (q 0).2 0 le_rfl
-  show R₀ (q 0).1
-  exact hp ▸ hp0
+  -- `α n`: the chains of length `n`, projected to shorter ones by restriction
+  let α (n : Nat) := {p : Fin (n + 1) → V //
+    R₀ (p 0) ∧ ∀ k : Fin n, R k (p k.castSucc) (p k.succ)}
+  let π {i j : Nat} (hij : i ≤ j) (b : α j) : α i :=
+    ⟨fun k => b.1 (k.castLE (by omega)), by simpa using b.2.1,
+      fun k => by simpa using b.2.2 (k.castLE hij)⟩
+  have : Finite (α 0) := by
+    have : Finite {v | R₀ v} := h₀.to_subtype
+    refine Finite.of_injective (fun p : α 0 => (⟨p.1 0, p.2.1⟩ : {v | R₀ v})) ?_
+    intro p q hpq
+    apply Subtype.ext; funext k
+    simpa [Fin.fin_one_eq_zero k] using congrArg Subtype.val hpq
+  have : ∀ n, Nonempty (α n) := fun n => by
+    obtain ⟨p, hp0, hp⟩ := h n
+    exact ⟨⟨fun k => p k, hp0, fun k => hp k k.2⟩⟩
+  obtain ⟨f, hf⟩ := exists_seq_forall_proj_of_forall_finite π
+    (fun _ _ => rfl) (fun _ _ _ _ _ _ => rfl) (fun i a => by
+      -- an extension of `a` is determined by its last value, a successor
+      let last := fun b : α (i + 1) => b.1 (Fin.last (i + 1))
+      refine Set.Finite.of_finite_image (f := last) ((hR i (a.1 (Fin.last i))).subset ?_) ?_
+      · rintro _ ⟨b, rfl, rfl⟩
+        have hl : (Fin.last i).castLE (Nat.le_succ (i + 1)) = (Fin.last i).castSucc :=
+          Fin.ext rfl
+        show R i (b.1 ((Fin.last i).castLE _)) _
+        rw [hl]
+        exact b.2.2 (Fin.last i)
+      · intro b hb c hc hbc
+        change π (Nat.le_add_right i 1) b = a at hb
+        change π (Nat.le_add_right i 1) c = a at hc
+        apply Subtype.ext; funext k
+        refine Fin.lastCases hbc (fun k => ?_) k
+        exact congrArg (fun a : α i => a.1 k) (hb.trans hc.symm))
+  refine ⟨fun n => (f n).1 (Fin.last n), by simpa using (f 0).2.1, fun n => ?_⟩
+  have e : (f (n + 1)).1 (Fin.last n).castSucc = (f n).1 (Fin.last n) :=
+    congrArg (fun a : α n => a.1 (Fin.last n)) (hf (Nat.le_succ n))
+  have := (f (n + 1)).2.2 (Fin.last n)
+  rw [Fin.succ_last, e] at this
+  exact this
 
 variable {Name : Type} {Dom : Name → Type u}
 
@@ -312,43 +304,35 @@ theorem Module.WF.finite_round {M : Module Dom} (hM : M.WF)
   set S := {v : Val Dom M.priv | ∀ A ∈ M.atoms,
       rel A ((M.withPriv t v).restrict A.await)
         ((M.withPriv t v).restrict A.write)} with hS
-  -- the await dependencies among the variables of `M` are well-founded
-  have hacyc := Atom.acyclic_iff_nameAcyclic.mp hM.atoms_acyclic
-  let r : {x // x ∈ M.vars} → {x // x ∈ M.vars} → Prop :=
-    fun y x => Relation.TransGen (Atom.dependsOn M.atoms) x.1 y.1
-  have : IsTrans _ r := ⟨fun _ _ _ hab hbc => Relation.TransGen.trans hbc hab⟩
-  have : Std.Irrefl r := ⟨fun a h => hacyc a.1 h⟩
-  have wf : WellFounded r := Finite.wellFounded_of_trans_of_irrefl r
-  -- every private variable takes finitely many values
-  have key : ∀ x : {x // x ∈ M.vars}, ∀ hx : x.1 ∈ M.priv,
-      ((fun v : Val Dom M.priv => v x.1 hx) '' S).Finite := by
+  -- every private variable takes finitely many values, by induction along
+  -- the await dependencies
+  have key : ∀ x, ∀ hx : x ∈ M.priv,
+      ((fun v : Val Dom M.priv => v x hx) '' S).Finite := by
     intro x
-    induction x using wf.induction with
+    induction x using hM.dependsOn_wf.induction with
     | _ x ih =>
       intro hx
-      obtain ⟨A, hA, hxA⟩ := hM.atoms_cov_ctrl x.1 (by simp [Module.ctrl, hx])
+      obtain ⟨A, hA, hxA⟩ := hM.atoms_cov_ctrl x (by simp [Module.ctrl, hx])
       -- the variables `A` awaits take finitely many values
       have hAw : ((fun v : Val Dom M.priv =>
           (M.withPriv t v).restrict A.await) '' S).Finite := by
         refine Val.finite_image_of_coord S _ fun y hy => ?_
         by_cases hyp : y ∈ M.priv
-        · refine (ih ⟨y, hM.atoms_await_vars A hA hy⟩
-            (Relation.TransGen.single ⟨A, hA, hxA, hy⟩) hyp).subset ?_
+        · refine (ih y ⟨A, hA, hxA, hy⟩ hyp).subset ?_
           rintro _ ⟨v, hv, rfl⟩
           exact ⟨v, hv, by simp [State.restrict, Module.withPriv, hyp]⟩
         · refine (Set.finite_singleton (t y)).subset ?_
           rintro _ ⟨v, hv, rfl⟩
           simp [State.restrict, Module.withPriv, hyp]
       have hW := hAw.biUnion fun a _ => hrel A hA a t
-      refine (hW.image fun w => w x.1 hxA).subset ?_
+      refine (hW.image fun w => w x hxA).subset ?_
       rintro _ ⟨v, hv, rfl⟩
       refine ⟨(M.withPriv t v).restrict A.write, ?_,
         by simp [State.restrict, Module.withPriv, hx]⟩
       simp only [Set.mem_iUnion]
       exact ⟨_, ⟨v, hv, rfl⟩, hv A hA,
         fun y hy hyp => by simp [State.restrict, Module.withPriv, hyp]⟩
-  have := Val.finite_image_of_coord S id fun x hx =>
-    key ⟨x, by simp [Module.vars, hx]⟩ hx
+  have := Val.finite_image_of_coord S id key
   simpa using this
 
 /-- A well-formed module whose atoms are finitely branching in its private
